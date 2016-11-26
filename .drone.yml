@@ -1,0 +1,16 @@
+workspace:
+  base: /go
+  path: src/github.com/metalmatze/alertmanager-telegram
+
+pipeline:
+  build:
+    image: golang:alpine
+    commands:
+      - apk add -U git make
+      - go get -v ./...
+      - make build
+
+  docker:
+    image: plugins/docker
+    repo: registry.matthiasloibl.com/alertmanager-telegram
+    tags: ['latest', '${DRONE_COMMIT:0:8}']
