@@ -1,7 +1,7 @@
 FROM alpine:latest
 RUN apk add --update ca-certificates
 
-ADD $GOPATH/bin/alertmanager-telegram /usr/bin/
+ADD ./alertmanager-telegram /usr/bin/alertmanager-telegram
 
 EXPOSE 8080
 

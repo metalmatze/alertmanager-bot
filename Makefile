@@ -6,7 +6,7 @@ LDFLAGS = -X "main.buildDate=$(shell date -u '+%Y-%m-%d %H:%M:%S %Z')"
 PACKAGES = $(shell go list ./... | grep -v /vendor/)
 
 .PHONY: all
-all: install
+all: build
 
 .PHONY: clean
 clean:
@@ -30,7 +30,7 @@ test:
 	@for PKG in $(PACKAGES); do go test -cover -coverprofile $$GOPATH/src/$$PKG/coverage.out $$PKG || exit 1; done;
 
 $(EXECUTABLE): $(wildcard *.go)
-	go install -ldflags '-s -w $(LDFLAGS)'
+	go build -ldflags '-w $(LDFLAGS)'
 
-.PHONY: install
-install: $(EXECUTABLE)
+.PHONY: build
+build: $(EXECUTABLE)
