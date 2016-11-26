@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,8 +16,8 @@ const (
 	commandStop  = "/stop"
 	commandHelp  = "/help"
 
-	responseStart = "Hey, %s! I will now keep you up to date! " + commandHelp
-	responseStop  = "Alright, %s! I won't talk to you again. " + commandHelp
+	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
+	responseStop  = "Alright, %s! I won't talk to you again.\n" + commandHelp
 	responseHelp  = `
 I'm a drone.io bot. I can notify you about your builds.
 
@@ -27,6 +28,7 @@ Available commands:
 )
 
 func main() {
+	log.Println("starting...")
 	bot, err := telebot.NewBot(os.Getenv("TELEGRAM_TOKEN"))
 	if err != nil {
 		log.Fatalln(err)
@@ -38,8 +40,13 @@ func main() {
 	go HTTPListenAndServe()
 
 	for message := range messages {
-		if message.Text == "/start" {
-			bot.SendMessage(message.Chat, "Hello, "+message.Sender.FirstName+"!", nil)
+		switch message.Text {
+		case commandStart:
+			bot.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
+		case commandStop:
+			bot.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
+		case commandHelp:
+			bot.SendMessage(message.Chat, responseHelp, nil)
 		}
 	}
 }
