@@ -63,16 +63,19 @@ func main() {
 
 func HTTPListenAndServe(bot *telebot.Bot) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		var m notify.WebhookMessage
+		var webhook notify.WebhookMessage
 
 		decoder := json.NewDecoder(r.Body)
-		err := decoder.Decode(&m)
+		err := decoder.Decode(&webhook)
 		if err != nil {
 			log.Printf("failed to decode webhook message: %v\n", err)
 		}
 		defer r.Body.Close()
 
-		status := m.Alerts[0].Status
+		jsonWebhook, _ := json.Marshal(webhook)
+		log.Println(string(jsonWebhook))
+
+		status := webhook.Alerts[0].Status
 		switch status {
 		case string(model.AlertFiring):
 			status = "🔥 *" + strings.ToUpper(status) + "* 🔥"
@@ -83,9 +86,9 @@ func HTTPListenAndServe(bot *telebot.Bot) {
 		message := fmt.Sprintf(
 			"%s\n*%s* (%s)\n%s",
 			status,
-			m.Alerts[0].Labels["alertname"],
-			m.Alerts[0].Annotations["summary"],
-			m.Alerts[0].Annotations["description"],
+			webhook.Alerts[0].Labels["alertname"],
+			webhook.Alerts[0].Annotations["summary"],
+			webhook.Alerts[0].Annotations["description"],
 		)
 
 		for _, user := range users {
