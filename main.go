@@ -75,24 +75,27 @@ func HTTPListenAndServe(bot *telebot.Bot) {
 		jsonWebhook, _ := json.Marshal(webhook)
 		log.Println(string(jsonWebhook))
 
-		status := webhook.Alerts[0].Status
-		switch status {
-		case string(model.AlertFiring):
-			status = "🔥 *" + strings.ToUpper(status) + "* 🔥"
-		case string(model.AlertResolved):
-			status = "✅ *" + strings.ToUpper(status) + "* ✅"
-		}
+		for _, alert := range webhook.Alerts {
+			status := alert.Status
+			switch status {
+			case string(model.AlertFiring):
+				status = "🔥 *" + strings.ToUpper(status) + "* 🔥"
+			case string(model.AlertResolved):
+				status = "✅ *" + strings.ToUpper(status) + "* ✅"
+			}
 
-		message := fmt.Sprintf(
-			"%s\n*%s* (%s)\n%s",
-			status,
-			webhook.Alerts[0].Labels["alertname"],
-			webhook.Alerts[0].Annotations["summary"],
-			webhook.Alerts[0].Annotations["description"],
-		)
+			message := fmt.Sprintf(
+				"%s\n*%s* (%s)\n%s",
+				status,
+				alert.Labels["alertname"],
+				alert.Annotations["summary"],
+				alert.Annotations["description"],
+			)
 
-		for _, user := range users {
-			bot.SendMessage(user, message, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+			for _, user := range users {
+				bot.SendMessage(user, message, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+			}
+
 		}
 
 		w.WriteHeader(http.StatusOK)
