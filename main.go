@@ -72,7 +72,10 @@ func HTTPListenAndServe(bot *telebot.Bot) {
 		}
 		defer r.Body.Close()
 
-		jsonWebhook, _ := json.Marshal(webhook)
+		jsonWebhook, err := json.Marshal(webhook)
+		if err != nil {
+			log.Printf("failed to encode webhook for logging: %v", err)
+		}
 		log.Println(string(jsonWebhook))
 
 		for _, alert := range webhook.Alerts {
