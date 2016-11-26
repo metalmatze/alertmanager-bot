@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/prometheus/alertmanager/notify"
+	"github.com/prometheus/common/model"
 	"github.com/tucnak/telebot"
 )
 
@@ -27,6 +30,8 @@ Available commands:
 `
 )
 
+var users map[int]telebot.User
+
 func main() {
 	log.Println("starting...")
 	bot, err := telebot.NewBot(os.Getenv("TELEGRAM_TOKEN"))
@@ -34,38 +39,61 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	users = make(map[int]telebot.User)
 	messages := make(chan telebot.Message, 100)
 	bot.Listen(messages, 1*time.Second)
 
-	go HTTPListenAndServe()
+	go HTTPListenAndServe(bot)
 
 	for message := range messages {
 		switch message.Text {
 		case commandStart:
 			bot.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
+			users[message.Sender.ID] = message.Sender
+			log.Printf("User %d subscribed", message.Sender.ID)
 		case commandStop:
 			bot.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
+			delete(users, message.Sender.ID)
+			log.Printf("User %d unsubscribed", message.Sender.ID)
 		case commandHelp:
 			bot.SendMessage(message.Chat, responseHelp, nil)
 		}
 	}
 }
 
-func HTTPListenAndServe() {
-	http.HandleFunc("/", Handle)
+func HTTPListenAndServe(bot *telebot.Bot) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		var m notify.WebhookMessage
+
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&m)
+		if err != nil {
+			log.Printf("failed to decode webhook message: %v\n", err)
+		}
+		defer r.Body.Close()
+
+		status := m.Alerts[0].Status
+		switch status {
+		case string(model.AlertFiring):
+			status = "🔥 *" + strings.ToUpper(status) + "* 🔥"
+		case string(model.AlertResolved):
+			status = "✅ *" + strings.ToUpper(status) + "* ✅"
+		}
+
+		message := fmt.Sprintf(
+			"%s\n*%s* (%s)\n%s",
+			status,
+			m.Alerts[0].Labels["alertname"],
+			m.Alerts[0].Annotations["summary"],
+			m.Alerts[0].Annotations["description"],
+		)
+
+		for _, user := range users {
+			bot.SendMessage(user, message, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+		}
+
+		w.WriteHeader(http.StatusOK)
+	})
 
 	log.Fatalln(http.ListenAndServe(":8080", nil))
-}
-
-func Handle(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("%s", b)
-
-	w.WriteHeader(http.StatusOK)
 }
