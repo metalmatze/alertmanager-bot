@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
+	arg "github.com/alexflint/go-arg"
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/common/model"
 	"github.com/tucnak/telebot"
@@ -32,9 +32,18 @@ Available commands:
 
 var users map[int]telebot.User
 
+type Config struct {
+	TelegramToken string `arg:"env:TELEGRAM_TOKEN"`
+	TelegramAdmin int    `arg:"env:TELEGRAM_ADMIN"`
+}
+
 func main() {
 	log.Println("starting...")
-	bot, err := telebot.NewBot(os.Getenv("TELEGRAM_TOKEN"))
+
+	var c Config
+	arg.MustParse(&c)
+
+	bot, err := telebot.NewBot(c.TelegramToken)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -46,15 +55,20 @@ func main() {
 	go HTTPListenAndServe(bot)
 
 	for message := range messages {
+		if message.Sender.ID != c.TelegramAdmin {
+			log.Printf("dropped message from unallowed sender: %s(%d)", message.Sender.Username, message.Sender.ID)
+			continue
+		}
+
 		switch message.Text {
 		case commandStart:
 			bot.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
 			users[message.Sender.ID] = message.Sender
-			log.Printf("User %d subscribed", message.Sender.ID)
+			log.Printf("User %s(%d) subscribed", message.Sender.Username, message.Sender.ID)
 		case commandStop:
 			bot.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
 			delete(users, message.Sender.ID)
-			log.Printf("User %d unsubscribed", message.Sender.ID)
+			log.Printf("User %s(%d) unsubscribed", message.Sender.Username, message.Sender.ID)
 		case commandHelp:
 			bot.SendMessage(message.Chat, responseHelp, nil)
 		}
