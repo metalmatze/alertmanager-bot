@@ -44,14 +44,16 @@ Available commands:
 var users map[int]telebot.User
 
 type Config struct {
-	TelegramToken string `arg:"env:TELEGRAM_TOKEN"`
-	TelegramAdmin int    `arg:"env:TELEGRAM_ADMIN"`
+	AlertmanagerURL string `arg:"env:ALERTMANAGER_URL"`
+	TelegramToken   string `arg:"env:TELEGRAM_TOKEN"`
+	TelegramAdmin   int    `arg:"env:TELEGRAM_ADMIN"`
 }
 
 func main() {
 	log.Println("starting...")
 
-	var c Config
+	// initialize Config{} with default values
+	c := Config{AlertmanagerURL: "http://localhost:9093"}
 	arg.MustParse(&c)
 
 	bot, err := telebot.NewBot(c.TelegramToken)
