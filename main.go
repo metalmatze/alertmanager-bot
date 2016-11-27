@@ -13,6 +13,7 @@ import (
 
 	arg "github.com/alexflint/go-arg"
 	"github.com/prometheus/alertmanager/notify"
+	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/common/model"
 	"github.com/tucnak/telebot"
 )
@@ -21,6 +22,13 @@ const (
 	commandStart = "/start"
 	commandStop  = "/stop"
 	commandHelp  = "/help"
+
+	commandStatus     = "/status"
+	commandAlerts     = "/alerts"
+	commandSilences   = "/silences"
+	commandSilenceAdd = "/silence_add"
+	commandSilence    = "/silence"
+	commandSilenceDel = "/silence_del"
 
 	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
 	responseStop  = "Alright, %s! I won't talk to you again.\n" + commandHelp
@@ -74,6 +82,18 @@ func main() {
 			log.Printf("User %s(%d) unsubscribed", message.Sender.Username, message.Sender.ID)
 		case commandHelp:
 			bot.SendMessage(message.Chat, responseHelp, nil)
+		case commandAlerts:
+			alerts, err := listAlerts()
+			if err != nil {
+				bot.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
+			}
+
+			var out string
+			for _, a := range alerts {
+				out = out + Message(a) + "\n"
+			}
+
+			bot.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 		}
 	}
 }
@@ -98,24 +118,11 @@ func HTTPListenAndServe(bot *telebot.Bot) {
 		log.Println(string(body))
 
 		for _, alert := range webhook.Alerts {
-			status := alert.Status
-			switch status {
-			case string(model.AlertFiring):
-				status = "🔥 *" + strings.ToUpper(status) + "* 🔥"
-			case string(model.AlertResolved):
-				status = "✅ *" + strings.ToUpper(status) + "* ✅"
-			}
-
-			message := fmt.Sprintf(
-				"%s\n*%s* (%s)\n%s",
-				status,
-				alert.Labels["alertname"],
-				alert.Annotations["summary"],
-				alert.Annotations["description"],
-			)
+			var out string
+			out = out + Message(alert) + "\n"
 
 			for _, user := range users {
-				bot.SendMessage(user, message, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+				bot.SendMessage(user, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 			}
 
 		}
@@ -124,4 +131,48 @@ func HTTPListenAndServe(bot *telebot.Bot) {
 	})
 
 	log.Fatalln(http.ListenAndServe(":8080", nil))
+}
+
+func Message(a template.Alert) string {
+	if a.Status == "" {
+		if a.EndsAt.IsZero() {
+			a.Status = string(model.AlertFiring)
+		} else {
+			a.Status = string(model.AlertResolved)
+		}
+	}
+
+	status := a.Status
+	switch status {
+	case string(model.AlertFiring):
+		status = "🔥 *" + strings.ToUpper(status) + "* 🔥"
+	case string(model.AlertResolved):
+		status = "*" + strings.ToUpper(status) + "*"
+	}
+
+	return fmt.Sprintf(
+		"%s\n*%s* (%s)\n%s\n",
+		status,
+		a.Labels["alertname"],
+		a.Annotations["summary"],
+		a.Annotations["description"],
+	)
+}
+
+type alertResponse struct {
+	Status string           `json:"status"`
+	Alerts []template.Alert `json:"data,omitempty"`
+}
+
+func listAlerts() ([]template.Alert, error) {
+	resp, err := http.Get("http://localhost:9093/api/v1/alerts")
+	if err != nil {
+		return nil, err
+	}
+
+	var alertResponse alertResponse
+	dec := json.NewDecoder(resp.Body)
+	dec.Decode(&alertResponse)
+
+	return alertResponse.Alerts, err
 }
