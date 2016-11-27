@@ -38,10 +38,10 @@ You can also ask me about my ` + commandStatus + `, ` + commandAlerts + ` & ` + 
 
 Available commands:
 ` + commandStart + ` - Subscribe for alerts.
-` + commandStop + `- Unsubscribe for alerts.
-` + commandStatus + `- Print the current status.
-` + commandAlerts + `- List all alerts.
-` + commandSilences + `- List all silences.
+` + commandStop + ` - Unsubscribe for alerts.
+` + commandStatus + ` - Print the current status.
+` + commandAlerts + ` - List all alerts.
+` + commandSilences + ` - List all silences.
 `
 )
 
