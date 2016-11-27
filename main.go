@@ -85,7 +85,7 @@ func main() {
 		case commandHelp:
 			bot.SendMessage(message.Chat, responseHelp, nil)
 		case commandAlerts:
-			alerts, err := listAlerts()
+			alerts, err := listAlerts(c)
 			if err != nil {
 				bot.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
 			}
@@ -166,8 +166,8 @@ type alertResponse struct {
 	Alerts []template.Alert `json:"data,omitempty"`
 }
 
-func listAlerts() ([]template.Alert, error) {
-	resp, err := http.Get("http://localhost:9093/api/v1/alerts")
+func listAlerts(c Config) ([]template.Alert, error) {
+	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/alerts")
 	if err != nil {
 		return nil, err
 	}
