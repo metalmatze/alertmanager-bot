@@ -52,7 +52,8 @@ type Config struct {
 func main() {
 	log.Println("starting...")
 
-	var c Config
+	// initialize Config{} with default values
+	c := Config{AlertmanagerURL: "http://localhost:9093"}
 	arg.MustParse(&c)
 
 	bot, err := telebot.NewBot(c.TelegramToken)
