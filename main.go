@@ -33,11 +33,15 @@ const (
 	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
 	responseStop  = "Alright, %s! I won't talk to you again.\n" + commandHelp
 	responseHelp  = `
-I'm a drone.io bot. I can notify you about your builds.
+I'm a Prometheus AlertManager bot for Telegram. I will notify you about alerts.
+You can also ask me about my ` + commandStatus + `, ` + commandAlerts + ` & ` + commandSilences + `
 
 Available commands:
-` + commandStart + ` - Start listening for drone.io builds
-` + commandStop + `- Stop listening for drone.io builds
+` + commandStart + ` - Subscribe for alerts.
+` + commandStop + `- Unsubscribe for alerts.
+` + commandStatus + `- Print the current status.
+` + commandAlerts + `- List all alerts.
+` + commandSilences + `- List all silences.
 `
 )
 
