@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -79,18 +82,20 @@ func HTTPListenAndServe(bot *telebot.Bot) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var webhook notify.WebhookMessage
 
-		decoder := json.NewDecoder(r.Body)
-		err := decoder.Decode(&webhook)
-		if err != nil {
-			log.Printf("failed to decode webhook message: %v\n", err)
-		}
+		var buf bytes.Buffer
+		tee := io.TeeReader(r.Body, &buf)
 		defer r.Body.Close()
 
-		jsonWebhook, err := json.Marshal(webhook)
-		if err != nil {
-			log.Printf("failed to encode webhook for logging: %v", err)
+		decoder := json.NewDecoder(tee)
+		if err := decoder.Decode(&webhook); err != nil {
+			log.Printf("failed to decode webhook message: %v\n", err)
 		}
-		log.Println(string(jsonWebhook))
+
+		body, err := ioutil.ReadAll(&buf)
+		if err != nil {
+			log.Printf("failed to read from request.Body for logging: %v", err)
+		}
+		log.Println(string(body))
 
 		for _, alert := range webhook.Alerts {
 			status := alert.Status
