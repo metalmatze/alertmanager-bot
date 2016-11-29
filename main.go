@@ -12,6 +12,7 @@ import (
 	"time"
 
 	arg "github.com/alexflint/go-arg"
+	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/template"
@@ -101,7 +102,14 @@ func main() {
 			if err != nil {
 				bot.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
 			}
-			bot.SendMessage(message.Chat, fmt.Sprintf("Version: %s\nUptime: %s", s.Data.VersionInfo.Version, s.Data.Uptime), nil)
+
+			uptime := durafmt.Parse(time.Since(s.Data.Uptime))
+
+			bot.SendMessage(
+				message.Chat,
+				fmt.Sprintf("Version: %s\nUptime: %s", s.Data.VersionInfo.Version, uptime),
+				nil,
+			)
 		case commandAlerts:
 			alerts, err := listAlerts(c)
 			if err != nil {
