@@ -22,6 +22,7 @@ const (
 	commandStart = "/start"
 	commandStop  = "/stop"
 	commandHelp  = "/help"
+	commandUsers = "/users"
 
 	commandStatus     = "/status"
 	commandAlerts     = "/alerts"
@@ -88,6 +89,8 @@ func main() {
 			log.Printf("User %s(%d) unsubscribed", message.Sender.Username, message.Sender.ID)
 		case commandHelp:
 			bot.SendMessage(message.Chat, responseHelp, nil)
+		case commandUsers:
+			bot.SendMessage(message.Chat, fmt.Sprintf("Currently %d users are subscribed.", len(users)), nil)
 		case commandAlerts:
 			alerts, err := listAlerts(c)
 			if err != nil {
