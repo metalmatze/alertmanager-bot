@@ -116,6 +116,10 @@ func main() {
 				bot.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
 			}
 
+			if len(alerts) == 0 {
+				bot.SendMessage(message.Chat, "No alerts right now! 🎉", nil)
+			}
+
 			var out string
 			for _, a := range alerts {
 				out = out + Message(a) + "\n"
