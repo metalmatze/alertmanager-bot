@@ -96,6 +96,12 @@ func main() {
 			bot.SendMessage(message.Chat, responseHelp, nil)
 		case commandUsers:
 			bot.SendMessage(message.Chat, fmt.Sprintf("Currently %d users are subscribed.", len(users)), nil)
+		case commandStatus:
+			s, err := status(c)
+			if err != nil {
+				bot.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
+			}
+			bot.SendMessage(message.Chat, fmt.Sprintf("Version: %s\nUptime: %s", s.Data.VersionInfo.Version, s.Data.Uptime), nil)
 		case commandAlerts:
 			alerts, err := listAlerts(c)
 			if err != nil {
@@ -186,7 +192,38 @@ func listAlerts(c Config) ([]template.Alert, error) {
 
 	var alertResponse alertResponse
 	dec := json.NewDecoder(resp.Body)
+	defer resp.Body.Close()
 	dec.Decode(&alertResponse)
 
 	return alertResponse.Alerts, err
+}
+
+type statusResponse struct {
+	Status string `json:"status"`
+	Data   struct {
+		Uptime      time.Time `json:"uptime"`
+		VersionInfo struct {
+			Branch    string `json:"branch"`
+			BuildDate string `json:"buildDate"`
+			BuildUser string `json:"buildUser"`
+			GoVersion string `json:"goVersion"`
+			Revision  string `json:"revision"`
+			Version   string `json:"version"`
+		} `json:"versionInfo"`
+	} `json:"data"`
+}
+
+func status(c Config) (statusResponse, error) {
+	var statusResponse statusResponse
+
+	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/status")
+	if err != nil {
+		return statusResponse, err
+	}
+
+	dec := json.NewDecoder(resp.Body)
+	defer resp.Body.Close()
+	dec.Decode(&statusResponse)
+
+	return statusResponse, nil
 }
