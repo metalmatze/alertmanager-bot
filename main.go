@@ -12,6 +12,7 @@ import (
 	"time"
 
 	arg "github.com/alexflint/go-arg"
+	"github.com/joho/godotenv"
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/common/model"
@@ -56,6 +57,10 @@ type Config struct {
 
 func main() {
 	log.Println("starting...")
+
+	if err := godotenv.Load(); err != nil {
+		log.Println(err)
+	}
 
 	// initialize Config{} with default values
 	c := Config{AlertmanagerURL: "http://localhost:9093"}
