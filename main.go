@@ -157,11 +157,9 @@ func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
 			var out string
 			out = out + Message(alert) + "\n"
 
-			for user := range users.List() {
-				fmt.Printf("%+v\n", user)
-				//bot.SendMessage(user, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+			for _, user := range users.List() {
+				bot.SendMessage(user, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 			}
-
 		}
 
 		w.WriteHeader(http.StatusOK)
