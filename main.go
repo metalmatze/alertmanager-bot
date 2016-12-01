@@ -54,6 +54,7 @@ type Config struct {
 	AlertmanagerURL string `arg:"env:ALERTMANAGER_URL"`
 	TelegramToken   string `arg:"env:TELEGRAM_TOKEN"`
 	TelegramAdmin   int    `arg:"env:TELEGRAM_ADMIN"`
+	Store           string `arg:"env:STORE"`
 }
 
 func main() {
