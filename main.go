@@ -48,8 +48,7 @@ Available commands:
 `
 )
 
-var users map[int]telebot.User
-
+// Config knows all configurations from ENV
 type Config struct {
 	AlertmanagerURL string `arg:"env:ALERTMANAGER_URL"`
 	TelegramToken   string `arg:"env:TELEGRAM_TOKEN"`
@@ -72,11 +71,15 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	users = make(map[int]telebot.User)
+	users, err := NewUserStore(c.Store)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	messages := make(chan telebot.Message, 100)
 	bot.Listen(messages, 1*time.Second)
 
-	go HTTPListenAndServe(bot)
+	go HTTPListenAndServe(bot, users)
 
 	for message := range messages {
 		if message.Sender.ID != c.TelegramAdmin {
@@ -87,16 +90,16 @@ func main() {
 		switch message.Text {
 		case commandStart:
 			bot.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
-			users[message.Sender.ID] = message.Sender
+			users.Add(message.Sender)
 			log.Printf("User %s(%d) subscribed", message.Sender.Username, message.Sender.ID)
 		case commandStop:
 			bot.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
-			delete(users, message.Sender.ID)
+			users.Remove(message.Sender)
 			log.Printf("User %s(%d) unsubscribed", message.Sender.Username, message.Sender.ID)
 		case commandHelp:
 			bot.SendMessage(message.Chat, responseHelp, nil)
 		case commandUsers:
-			bot.SendMessage(message.Chat, fmt.Sprintf("Currently %d users are subscribed.", len(users)), nil)
+			bot.SendMessage(message.Chat, fmt.Sprintf("Currently %d users are subscribed.", users.Len()), nil)
 		case commandStatus:
 			s, err := status(c)
 			if err != nil {
@@ -130,7 +133,8 @@ func main() {
 	}
 }
 
-func HTTPListenAndServe(bot *telebot.Bot) {
+// HTTPListenAndServe starts a http server and listens for incoming alerts to send to the users
+func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var webhook notify.WebhookMessage
 
@@ -153,8 +157,9 @@ func HTTPListenAndServe(bot *telebot.Bot) {
 			var out string
 			out = out + Message(alert) + "\n"
 
-			for _, user := range users {
-				bot.SendMessage(user, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+			for user := range users.List() {
+				fmt.Printf("%+v\n", user)
+				//bot.SendMessage(user, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 			}
 
 		}
@@ -165,6 +170,7 @@ func HTTPListenAndServe(bot *telebot.Bot) {
 	log.Fatalln(http.ListenAndServe(":8080", nil))
 }
 
+// Message converts an alert to a message string
 func Message(a template.Alert) string {
 	if a.Status == "" {
 		if a.EndsAt.IsZero() {

@@ -2,57 +2,82 @@ package main
 
 import (
 	"io/ioutil"
-	"os"
 	"sync"
 
 	"github.com/tucnak/telebot"
 	yaml "gopkg.in/yaml.v2"
 )
 
+// UserStore writes the users to a file for persistence
 type UserStore struct {
-	mu    sync.RWMutex
+	mu    sync.Mutex
 	file  string
 	users map[int]telebot.User
 }
 
-func NewUserStore(file string) error {
-	store := UserStore{
+// NewUserStore from a filename and loading the contents if there is
+func NewUserStore(file string) (*UserStore, error) {
+	store := &UserStore{
 		file:  file,
 		users: make(map[int]telebot.User),
 	}
 
-	f, err := os.Open(file)
+	usersBytes, err := ioutil.ReadFile(store.file)
 	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	usersBytes, err := ioutil.ReadAll(f)
-	if err != nil {
-		return err
+		return store, err
 	}
 
 	store.mu.Lock()
 	if err := yaml.Unmarshal(usersBytes, &store.users); err != nil {
-		return err
+		return store, err
 	}
 	store.mu.Unlock()
 
-	return nil
+	return store, nil
 }
 
+// Len returns the users count
+func (s *UserStore) Len() int {
+	return len(s.users)
+}
+
+// List all users as slice to range over
+func (s *UserStore) List() []telebot.User {
+	var users []telebot.User
+	for _, u := range s.users {
+		users = append(users, u)
+	}
+	return users
+}
+
+// Add a telebot User to the store and write the current users to disk
 func (s *UserStore) Add(u telebot.User) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	s.users[u.ID] = u
+
+	out, err := yaml.Marshal(s.users)
+	if err != nil {
+		return err
+	}
+	ioutil.WriteFile(s.file, out, 0644)
 
 	return nil
 }
 
-func (s *UserStore) Delete(uID int) error {
+// Remove a telebot User from the store and write the current users to disk
+func (s *UserStore) Remove(u telebot.User) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.users, uID)
+
+	delete(s.users, u.ID)
+
+	out, err := yaml.Marshal(s.users)
+	if err != nil {
+		return err
+	}
+	ioutil.WriteFile(s.file, out, 0644)
 
 	return nil
 }
