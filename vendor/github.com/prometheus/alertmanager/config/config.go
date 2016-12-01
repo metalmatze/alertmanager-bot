@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/prometheus/common/model"
+	"gopkg.in/yaml.v2"
 )
 
 var patAuthLine = regexp.MustCompile(`((?:api_key|service_key|api_url|token|user_key|password|secret):\s+)(".+"|'.+'|[^\s]+)`)
