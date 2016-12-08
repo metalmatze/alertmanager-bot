@@ -17,3 +17,6 @@ pipeline:
     image: plugins/docker
     repo: registry.matthiasloibl.com/alertmanager-telegram
     tags: ['latest', '${DRONE_COMMIT:0:8}']
+    when:
+      event: [ push ]
+      branch: [ master ]
