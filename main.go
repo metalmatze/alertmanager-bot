@@ -287,8 +287,6 @@ func SilenceMessage(s types.Silence) string {
 		}
 	}
 
-	fmt.Println(matchers)
-
 	return fmt.Sprintf(
 		"%s 🔕\n```%s```\n",
 		alertname,
