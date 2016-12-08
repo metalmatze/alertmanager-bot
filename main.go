@@ -15,7 +15,7 @@ import (
 	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/alertmanager/notify"
-	"github.com/prometheus/alertmanager/template"
+	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
 	"github.com/tucnak/telebot"
 )
@@ -171,7 +171,27 @@ func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
 		}
 		log.Println(string(body))
 
-		for _, alert := range webhook.Alerts {
+		for _, webAlert := range webhook.Alerts {
+			labels := make(map[model.LabelName]model.LabelValue)
+			for k, v := range webAlert.Labels {
+				labels[model.LabelName(k)] = model.LabelValue(v)
+			}
+
+			annotations := make(map[model.LabelName]model.LabelValue)
+			for k, v := range webAlert.Annotations {
+				annotations[model.LabelName(k)] = model.LabelValue(v)
+			}
+
+			alert := types.Alert{
+				Alert: model.Alert{
+					StartsAt:     webAlert.StartsAt,
+					EndsAt:       webAlert.EndsAt,
+					GeneratorURL: webAlert.GeneratorURL,
+					Labels:       labels,
+					Annotations:  annotations,
+				},
+			}
+
 			var out string
 			out = out + AlertMessage(alert) + "\n"
 
@@ -187,11 +207,11 @@ func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
 }
 
 type alertResponse struct {
-	Status string           `json:"status"`
-	Alerts []template.Alert `json:"data,omitempty"`
+	Status string        `json:"status"`
+	Alerts []types.Alert `json:"data,omitempty"`
 }
 
-func listAlerts(c Config) ([]template.Alert, error) {
+func listAlerts(c Config) ([]types.Alert, error) {
 	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/alerts")
 	if err != nil {
 		return nil, err
@@ -200,27 +220,21 @@ func listAlerts(c Config) ([]template.Alert, error) {
 	var alertResponse alertResponse
 	dec := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
-	dec.Decode(&alertResponse)
+	if err := dec.Decode(&alertResponse); err != nil {
+		return nil, err
+	}
 
 	return alertResponse.Alerts, err
 }
 
 // AlertMessage converts an alert to a message string
-func AlertMessage(a template.Alert) string {
-	if a.Status == "" {
-		if a.EndsAt.IsZero() {
-			a.Status = string(model.AlertFiring)
-		} else {
-			a.Status = string(model.AlertResolved)
-		}
-	}
-
-	status := a.Status
-	switch status {
-	case string(model.AlertFiring):
-		status = "🔥 *" + strings.ToUpper(status) + "* 🔥"
-	case string(model.AlertResolved):
-		status = "*" + strings.ToUpper(status) + "*"
+func AlertMessage(a types.Alert) string {
+	var status string
+	switch a.Status() {
+	case model.AlertFiring:
+		status = "🔥 *" + strings.ToUpper(string(a.Status())) + "* 🔥"
+	case model.AlertResolved:
+		status = "*" + strings.ToUpper(string(a.Status())) + "*"
 	}
 
 	return fmt.Sprintf(
@@ -233,12 +247,13 @@ func AlertMessage(a template.Alert) string {
 }
 
 type silencesResponse struct {
-	Data   []model.Silence `json:"data"`
+	Data   []types.Silence `json:"data"`
 	Status string          `json:"status"`
 }
 
-func listSilences(c Config) ([]model.Silence, error) {
-	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/alerts")
+func listSilences(c Config) ([]types.Silence, error) {
+	url := c.AlertmanagerURL + "/api/v1/silences"
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -246,16 +261,32 @@ func listSilences(c Config) ([]model.Silence, error) {
 	var silencesResponse silencesResponse
 	dec := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
-	dec.Decode(&silencesResponse)
-
-	fmt.Printf("%+v\n", silencesResponse)
+	if err := dec.Decode(&silencesResponse); err != nil {
+		return nil, err
+	}
 
 	return silencesResponse.Data, err
 }
 
 // SilenceMessage converts a silences to a message string
-func SilenceMessage(s model.Silence) string {
-	return s.Comment
+func SilenceMessage(s types.Silence) string {
+	var alertname, matchers string
+
+	for _, m := range s.Matchers {
+		if m.Name == "alertname" {
+			alertname = m.Value
+		} else {
+			matchers = matchers + fmt.Sprintf(` %s="%s"`, m.Name, m.Value)
+		}
+	}
+
+	fmt.Println(matchers)
+
+	return fmt.Sprintf(
+		"%s 🔕\n```%s```\n",
+		alertname,
+		strings.TrimSpace(matchers),
+	)
 }
 
 type statusResponse struct {
@@ -283,7 +314,9 @@ func status(c Config) (statusResponse, error) {
 
 	dec := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
-	dec.Decode(&statusResponse)
+	if err := dec.Decode(&statusResponse); err != nil {
+		return statusResponse, err
+	}
 
 	return statusResponse, nil
 }
