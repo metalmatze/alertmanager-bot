@@ -15,7 +15,7 @@ import (
 	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/alertmanager/notify"
-	"github.com/prometheus/alertmanager/template"
+	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
 	"github.com/tucnak/telebot"
 )
@@ -125,10 +125,28 @@ func main() {
 
 			var out string
 			for _, a := range alerts {
-				out = out + Message(a) + "\n"
+				out = out + AlertMessage(a) + "\n"
 			}
 
 			bot.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+		case commandSilences:
+			silences, err := listSilences(c)
+			if err != nil {
+				bot.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
+			}
+
+			if len(silences) == 0 {
+				bot.SendMessage(message.Chat, "No silences right now.", nil)
+			}
+
+			var out string
+			for _, silence := range silences {
+				out = out + SilenceMessage(silence) + "\n"
+			}
+
+			bot.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+		default:
+			bot.SendMessage(message.Chat, "Sorry, I don't understand...", nil)
 		}
 	}
 }
@@ -153,9 +171,29 @@ func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
 		}
 		log.Println(string(body))
 
-		for _, alert := range webhook.Alerts {
+		for _, webAlert := range webhook.Alerts {
+			labels := make(map[model.LabelName]model.LabelValue)
+			for k, v := range webAlert.Labels {
+				labels[model.LabelName(k)] = model.LabelValue(v)
+			}
+
+			annotations := make(map[model.LabelName]model.LabelValue)
+			for k, v := range webAlert.Annotations {
+				annotations[model.LabelName(k)] = model.LabelValue(v)
+			}
+
+			alert := types.Alert{
+				Alert: model.Alert{
+					StartsAt:     webAlert.StartsAt,
+					EndsAt:       webAlert.EndsAt,
+					GeneratorURL: webAlert.GeneratorURL,
+					Labels:       labels,
+					Annotations:  annotations,
+				},
+			}
+
 			var out string
-			out = out + Message(alert) + "\n"
+			out = out + AlertMessage(alert) + "\n"
 
 			for _, user := range users.List() {
 				bot.SendMessage(user, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
@@ -168,25 +206,36 @@ func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
 	log.Fatalln(http.ListenAndServe(":8080", nil))
 }
 
-// Message converts an alert to a message string
-func Message(a template.Alert) string {
-	if a.Status == "" {
-		if a.EndsAt.IsZero() {
-			a.Status = string(model.AlertFiring)
-		} else {
-			a.Status = string(model.AlertResolved)
-		}
+type alertResponse struct {
+	Status string        `json:"status"`
+	Alerts []types.Alert `json:"data,omitempty"`
+}
+
+func listAlerts(c Config) ([]types.Alert, error) {
+	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/alerts")
+	if err != nil {
+		return nil, err
 	}
 
-	var duration string
+	var alertResponse alertResponse
+	dec := json.NewDecoder(resp.Body)
+	defer resp.Body.Close()
+	if err := dec.Decode(&alertResponse); err != nil {
+		return nil, err
+	}
 
-	status := a.Status
-	switch status {
-	case string(model.AlertFiring):
-		status = "🔥 *" + strings.ToUpper(status) + "* 🔥"
+	return alertResponse.Alerts, err
+}
+
+// AlertMessage converts an alert to a message string
+func AlertMessage(a types.Alert) string {
+	var status, duration string
+	switch a.Status() {
+	case model.AlertFiring:
+		status = "🔥 *" + strings.ToUpper(string(a.Status())) + "* 🔥"
 		duration = fmt.Sprintf("*Started*: %s ago", durafmt.Parse(time.Since(a.StartsAt)))
-	case string(model.AlertResolved):
-		status = "*" + strings.ToUpper(status) + "*"
+	case model.AlertResolved:
+		status = "*" + strings.ToUpper(string(a.Status())) + "*"
 		duration = fmt.Sprintf(
 			"*Ended*: %s ago\n*Duration*: %s",
 			durafmt.Parse(time.Since(a.EndsAt)),
@@ -204,23 +253,47 @@ func Message(a template.Alert) string {
 	)
 }
 
-type alertResponse struct {
-	Status string           `json:"status"`
-	Alerts []template.Alert `json:"data,omitempty"`
+type silencesResponse struct {
+	Data   []types.Silence `json:"data"`
+	Status string          `json:"status"`
 }
 
-func listAlerts(c Config) ([]template.Alert, error) {
-	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/alerts")
+func listSilences(c Config) ([]types.Silence, error) {
+	url := c.AlertmanagerURL + "/api/v1/silences"
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 
-	var alertResponse alertResponse
+	var silencesResponse silencesResponse
 	dec := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
-	dec.Decode(&alertResponse)
+	if err := dec.Decode(&silencesResponse); err != nil {
+		return nil, err
+	}
 
-	return alertResponse.Alerts, err
+	return silencesResponse.Data, err
+}
+
+// SilenceMessage converts a silences to a message string
+func SilenceMessage(s types.Silence) string {
+	var alertname, matchers string
+
+	for _, m := range s.Matchers {
+		if m.Name == "alertname" {
+			alertname = m.Value
+		} else {
+			matchers = matchers + fmt.Sprintf(` %s="%s"`, m.Name, m.Value)
+		}
+	}
+
+	fmt.Println(matchers)
+
+	return fmt.Sprintf(
+		"%s 🔕\n```%s```\n",
+		alertname,
+		strings.TrimSpace(matchers),
+	)
 }
 
 type statusResponse struct {
@@ -248,7 +321,9 @@ func status(c Config) (statusResponse, error) {
 
 	dec := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
-	dec.Decode(&statusResponse)
+	if err := dec.Decode(&statusResponse); err != nil {
+		return statusResponse, err
+	}
 
 	return statusResponse, nil
 }
