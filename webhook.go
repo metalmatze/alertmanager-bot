@@ -14,7 +14,7 @@ import (
 	"github.com/tucnak/telebot"
 )
 
-// HTTPListenAndServe starts a http server and listens for incoming alerts to send to the users
+// WebhookListen starts a http server and listens for incoming alerts to send to the users
 func WebhookListen(addr string, bot *telebot.Bot, users *UserStore) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var webhook notify.WebhookMessage
