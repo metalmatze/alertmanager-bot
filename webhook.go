@@ -15,7 +15,7 @@ import (
 )
 
 // HTTPListenAndServe starts a http server and listens for incoming alerts to send to the users
-func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
+func WebhookListen(addr string, bot *telebot.Bot, users *UserStore) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var webhook notify.WebhookMessage
 
@@ -66,5 +66,9 @@ func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	log.Fatalln(http.ListenAndServe(":8080", nil))
+	if addr == "" {
+		addr = ":8080"
+	}
+
+	log.Fatalln(http.ListenAndServe(addr, nil))
 }

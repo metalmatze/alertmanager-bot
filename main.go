@@ -45,6 +45,7 @@ type Config struct {
 	TelegramToken   string `arg:"env:TELEGRAM_TOKEN"`
 	TelegramAdmin   int    `arg:"env:TELEGRAM_ADMIN"`
 	Store           string `arg:"env:STORE"`
+	ListenAddr      string `arg:"env:LISTEN_ADDR"`
 }
 
 func main() {
@@ -70,7 +71,7 @@ func main() {
 	messages := make(chan telebot.Message, 100)
 	bot.Listen(messages, 1*time.Second)
 
-	go HTTPListenAndServe(bot, users)
+	go WebhookListen(c.ListenAddr, bot, users)
 
 	for message := range messages {
 		if message.Sender.ID != c.TelegramAdmin {
