@@ -178,20 +178,29 @@ func Message(a template.Alert) string {
 		}
 	}
 
+	var duration string
+
 	status := a.Status
 	switch status {
 	case string(model.AlertFiring):
 		status = "🔥 *" + strings.ToUpper(status) + "* 🔥"
+		duration = fmt.Sprintf("*Started*: %s ago", durafmt.Parse(time.Since(a.StartsAt)))
 	case string(model.AlertResolved):
 		status = "*" + strings.ToUpper(status) + "*"
+		duration = fmt.Sprintf(
+			"*Ended*: %s ago\n*Duration*: %s",
+			durafmt.Parse(time.Since(a.EndsAt)),
+			durafmt.Parse(a.EndsAt.Sub(a.StartsAt)),
+		)
 	}
 
 	return fmt.Sprintf(
-		"%s\n*%s* (%s)\n%s\n",
+		"%s\n*%s* (%s)\n%s\n%s\n",
 		status,
 		a.Labels["alertname"],
 		a.Annotations["summary"],
 		a.Annotations["description"],
+		duration,
 	)
 }
 
