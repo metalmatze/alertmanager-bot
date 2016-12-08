@@ -125,10 +125,28 @@ func main() {
 
 			var out string
 			for _, a := range alerts {
-				out = out + Message(a) + "\n"
+				out = out + AlertMessage(a) + "\n"
 			}
 
 			bot.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+		case commandSilences:
+			silences, err := listSilences(c)
+			if err != nil {
+				bot.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
+			}
+
+			if len(silences) == 0 {
+				bot.SendMessage(message.Chat, "No silences right now.", nil)
+			}
+
+			var out string
+			for _, silence := range silences {
+				out = out + SilenceMessage(silence) + "\n"
+			}
+
+			bot.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+		default:
+			bot.SendMessage(message.Chat, "Sorry, I don't understand...", nil)
 		}
 	}
 }
@@ -155,7 +173,7 @@ func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
 
 		for _, alert := range webhook.Alerts {
 			var out string
-			out = out + Message(alert) + "\n"
+			out = out + AlertMessage(alert) + "\n"
 
 			for _, user := range users.List() {
 				bot.SendMessage(user, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
@@ -168,8 +186,27 @@ func HTTPListenAndServe(bot *telebot.Bot, users *UserStore) {
 	log.Fatalln(http.ListenAndServe(":8080", nil))
 }
 
-// Message converts an alert to a message string
-func Message(a template.Alert) string {
+type alertResponse struct {
+	Status string           `json:"status"`
+	Alerts []template.Alert `json:"data,omitempty"`
+}
+
+func listAlerts(c Config) ([]template.Alert, error) {
+	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/alerts")
+	if err != nil {
+		return nil, err
+	}
+
+	var alertResponse alertResponse
+	dec := json.NewDecoder(resp.Body)
+	defer resp.Body.Close()
+	dec.Decode(&alertResponse)
+
+	return alertResponse.Alerts, err
+}
+
+// AlertMessage converts an alert to a message string
+func AlertMessage(a template.Alert) string {
 	if a.Status == "" {
 		if a.EndsAt.IsZero() {
 			a.Status = string(model.AlertFiring)
@@ -195,23 +232,30 @@ func Message(a template.Alert) string {
 	)
 }
 
-type alertResponse struct {
-	Status string           `json:"status"`
-	Alerts []template.Alert `json:"data,omitempty"`
+type silencesResponse struct {
+	Data   []model.Silence `json:"data"`
+	Status string          `json:"status"`
 }
 
-func listAlerts(c Config) ([]template.Alert, error) {
+func listSilences(c Config) ([]model.Silence, error) {
 	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/alerts")
 	if err != nil {
 		return nil, err
 	}
 
-	var alertResponse alertResponse
+	var silencesResponse silencesResponse
 	dec := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
-	dec.Decode(&alertResponse)
+	dec.Decode(&silencesResponse)
 
-	return alertResponse.Alerts, err
+	fmt.Printf("%+v\n", silencesResponse)
+
+	return silencesResponse.Data, err
+}
+
+// SilenceMessage converts a silences to a message string
+func SilenceMessage(s model.Silence) string {
+	return s.Comment
 }
 
 type statusResponse struct {
