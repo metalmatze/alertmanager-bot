@@ -39,6 +39,11 @@ Available commands:
 `
 )
 
+var (
+	BuildTime string
+	Commit    string
+)
+
 // Config knows all configurations from ENV
 type Config struct {
 	AlertmanagerURL string `arg:"env:ALERTMANAGER_URL"`
@@ -49,7 +54,8 @@ type Config struct {
 }
 
 func main() {
-	log.Println("starting...")
+	log.Println("starting alertmanager-telegram")
+	log.Printf("BuildTime: %s, Commit: %s\n", BuildTime, Commit)
 
 	if err := godotenv.Load(); err != nil {
 		log.Println(err)

@@ -2,7 +2,7 @@ EXECUTABLE ?= alertmanager-telegram
 IMAGE ?= metalmatze/$(EXECUTABLE)
 CI_BUILD_NUMBER ?= 0
 
-LDFLAGS = -X "main.buildDate=$(shell date -u '+%Y-%m-%d %H:%M:%S %Z')"
+LDFLAGS = -X main.BuildTime=$(shell date +%FT%T%z) -X main.Commit=$(shell git rev-parse --short=8 HEAD)
 PACKAGES = $(shell go list ./... | grep -v /vendor/)
 
 .PHONY: all
