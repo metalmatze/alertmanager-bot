@@ -21,10 +21,10 @@ type statusResponse struct {
 	} `json:"data"`
 }
 
-func status(c Config) (statusResponse, error) {
+func status(alertmanagerURL string) (statusResponse, error) {
 	var statusResponse statusResponse
 
-	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/status")
+	resp, err := http.Get(alertmanagerURL + "/api/v1/status")
 	if err != nil {
 		return statusResponse, err
 	}
