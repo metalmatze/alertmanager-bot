@@ -157,11 +157,18 @@ func (b *Bot) handleStatus(message telebot.Message) {
 	}
 
 	uptime := durafmt.Parse(time.Since(s.Data.Uptime))
+	uptimeBot := durafmt.Parse(time.Since(StartTime))
 
 	b.telegram.SendMessage(
 		message.Chat,
-		fmt.Sprintf("Version: %s\nUptime: %s", s.Data.VersionInfo.Version, uptime),
-		nil,
+		fmt.Sprintf(
+			"*AlertManager*\nVersion: %s\nUptime: %s\n*Bot*\nVersion: %s\nUptime: %s",
+			s.Data.VersionInfo.Version,
+			uptime,
+			Commit,
+			uptimeBot,
+		),
+		&telebot.SendOptions{ParseMode: telebot.ModeMarkdown},
 	)
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	arg "github.com/alexflint/go-arg"
 	"github.com/joho/godotenv"
@@ -12,6 +13,8 @@ var (
 	BuildTime string
 	// Commit is the git commit the binary was built from
 	Commit string
+	// StartTime is the time the program was started
+	StartTime time.Time
 )
 
 // Config knows all configurations from ENV
@@ -26,6 +29,7 @@ type Config struct {
 func main() {
 	log.Println("starting alertmanager-telegram")
 	log.Printf("BuildTime: %s, Commit: %s\n", BuildTime, Commit)
+	StartTime = time.Now()
 
 	if err := godotenv.Load(); err != nil {
 		log.Println(err)
