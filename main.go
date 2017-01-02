@@ -40,8 +40,10 @@ Available commands:
 )
 
 var (
+	// BuildTime is the time the binary was built
 	BuildTime string
-	Commit    string
+	// Commit is the git commit the binary was built from
+	Commit string
 )
 
 // Config knows all configurations from ENV
