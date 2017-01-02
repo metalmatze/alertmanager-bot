@@ -1,6 +1,7 @@
 /.env
 /alertmanager-telegram
-/users.yml
+/coverage.out
+/data.yml
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
 *.o
