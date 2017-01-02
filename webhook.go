@@ -1,38 +1,30 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
-	"github.com/tucnak/telebot"
 )
 
-// WebhookListen starts a http server and listens for incoming alerts to send to the users
-func WebhookListen(addr string, bot *telebot.Bot, users *UserStore) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+// HandleWebhook returns a HandlerFunc that sends messages for users via a channel
+func HandleWebhook(messages chan<- string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		var webhook notify.WebhookMessage
 
-		var buf bytes.Buffer
-		tee := io.TeeReader(r.Body, &buf)
-		defer r.Body.Close()
+		decoder := json.NewDecoder(r.Body)
+		defer func() {
+			if err := r.Body.Close(); err != nil {
+				log.Println(err)
+			}
+		}()
 
-		decoder := json.NewDecoder(tee)
 		if err := decoder.Decode(&webhook); err != nil {
 			log.Printf("failed to decode webhook message: %v\n", err)
 		}
-
-		body, err := ioutil.ReadAll(&buf)
-		if err != nil {
-			log.Printf("failed to read from request.Body for logging: %v", err)
-		}
-		log.Println(string(body))
 
 		for _, webAlert := range webhook.Alerts {
 			labels := make(map[model.LabelName]model.LabelValue)
@@ -58,17 +50,9 @@ func WebhookListen(addr string, bot *telebot.Bot, users *UserStore) {
 			var out string
 			out = out + AlertMessage(alert) + "\n"
 
-			for _, user := range users.List() {
-				bot.SendMessage(user, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
-			}
+			messages <- out
 		}
 
 		w.WriteHeader(http.StatusOK)
-	})
-
-	if addr == "" {
-		addr = ":8080"
 	}
-
-	log.Fatalln(http.ListenAndServe(addr, nil))
 }
