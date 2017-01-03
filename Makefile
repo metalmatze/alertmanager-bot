@@ -12,16 +12,6 @@ all: build
 clean:
 	go clean -i ./...
 
-$(EXECUTABLE): $(wildcard *.go)
-	go build -ldflags '-w $(LDFLAGS)'
-
-.PHONY: build
-build: $(EXECUTABLE)
-
-.PHONY: test
-test:
-	@for PKG in $(PACKAGES); do go test -cover -coverprofile $$GOPATH/src/$$PKG/coverage.out $$PKG || exit 1; done;
-
 .PHONY: fmt
 fmt:
 	go fmt $(PACKAGES)
@@ -36,3 +26,17 @@ lint:
 		go get -u github.com/golang/lint/golint; \
 	fi
 	for PKG in $(PACKAGES); do golint -set_exit_status $$PKG || exit 1; done;
+
+.PHONY: test
+test:
+	@for PKG in $(PACKAGES); do go test -cover -coverprofile $$GOPATH/src/$$PKG/coverage.out $$PKG || exit 1; done;
+
+$(EXECUTABLE): $(wildcard *.go)
+	go build -ldflags '-w $(LDFLAGS)'
+
+.PHONY: build
+build: $(EXECUTABLE)
+
+.PHONY: install
+install:
+	go install -ldflags '-w $(LDFLAGS)'
