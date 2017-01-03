@@ -176,7 +176,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 }
 
 func (b *Bot) handleAlerts(message telebot.Message) {
-	alerts, err := listAlerts(b.Config)
+	alerts, err := listAlerts(b.Config.AlertmanagerURL)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
 		return
@@ -196,7 +196,7 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 }
 
 func (b *Bot) handleSilences(message telebot.Message) {
-	silences, err := listSilences(b.Config)
+	silences, err := listSilences(b.Config.AlertmanagerURL)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
 		return
