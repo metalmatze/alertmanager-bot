@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -25,9 +24,8 @@ type silencesResponse struct {
 	Status string          `json:"status"`
 }
 
-func listSilences(c Config) ([]types.Silence, error) {
-	url := c.AlertmanagerURL + "/api/v1/silences"
-	resp, err := http.Get(url)
+func listSilences(alertmanagerURL string) ([]types.Silence, error) {
+	resp, err := httpGetRetry(alertmanagerURL + "/api/v1/silences")
 	if err != nil {
 		return nil, err
 	}

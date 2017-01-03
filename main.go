@@ -1,10 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	arg "github.com/alexflint/go-arg"
+	"github.com/cenkalti/backoff"
 	"github.com/joho/godotenv"
 )
 
@@ -46,4 +49,40 @@ func main() {
 	go bot.RunWebhook()
 
 	bot.Run()
+}
+
+func httpGetBackoff() *backoff.ExponentialBackOff {
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = 200 * time.Millisecond
+	b.MaxInterval = 2 * time.Second
+	b.MaxElapsedTime = 5 * time.Second // Telegram shows "typing" max 5 seconds
+	return b
+}
+
+func httpGetRetry(url string) (*http.Response, error) {
+	var resp *http.Response
+	var err error
+
+	get := func() error {
+		resp, err = http.Get(url)
+		if err != nil {
+			return err
+		}
+
+		if resp.StatusCode != 200 {
+			return fmt.Errorf("status code is %d not 200", resp.StatusCode)
+		}
+
+		return nil
+	}
+
+	notify := func(err error, dur time.Duration) {
+		log.Printf("retrying in %v: %v", dur, err)
+	}
+
+	if err := backoff.RetryNotify(get, httpGetBackoff(), notify); err != nil {
+		return nil, err
+	}
+
+	return resp, err
 }

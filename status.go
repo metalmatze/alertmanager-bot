@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"net/http"
 	"time"
 )
 
@@ -24,7 +23,7 @@ type statusResponse struct {
 func status(alertmanagerURL string) (statusResponse, error) {
 	var statusResponse statusResponse
 
-	resp, err := http.Get(alertmanagerURL + "/api/v1/status")
+	resp, err := httpGetRetry(alertmanagerURL + "/api/v1/status")
 	if err != nil {
 		return statusResponse, err
 	}

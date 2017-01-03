@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -17,8 +16,8 @@ type alertResponse struct {
 	Alerts []types.Alert `json:"data,omitempty"`
 }
 
-func listAlerts(c Config) ([]types.Alert, error) {
-	resp, err := http.Get(c.AlertmanagerURL + "/api/v1/alerts")
+func listAlerts(alertmanagerURL string) ([]types.Alert, error) {
+	resp, err := httpGetRetry(alertmanagerURL + "/api/v1/alerts")
 	if err != nil {
 		return nil, err
 	}
