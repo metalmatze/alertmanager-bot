@@ -162,7 +162,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 	b.telegram.SendMessage(
 		message.Chat,
 		fmt.Sprintf(
-			"*AlertManager*\nVersion: %s\nUptime: %s\n*Bot*\nVersion: %s\nUptime: %s",
+			"*AlertManager*\nVersion: %s\nUptime: %s\n*AlertManager Bot*\nVersion: %s\nUptime: %s",
 			s.Data.VersionInfo.Version,
 			uptime,
 			Commit,
