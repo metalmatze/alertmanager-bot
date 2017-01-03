@@ -101,6 +101,8 @@ func (b *Bot) Run() {
 			continue
 		}
 
+		b.telegram.SendChatAction(message.Chat, telebot.Typing)
+
 		switch message.Text {
 		case commandStart:
 			b.handleStart(message)
@@ -154,6 +156,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 	s, err := status(b.Config.AlertmanagerURL)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
+		return
 	}
 
 	uptime := durafmt.Parse(time.Since(s.Data.Uptime))
@@ -196,10 +199,12 @@ func (b *Bot) handleSilences(message telebot.Message) {
 	silences, err := listSilences(b.Config)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
+		return
 	}
 
 	if len(silences) == 0 {
 		b.telegram.SendMessage(message.Chat, "No silences right now.", nil)
+		return
 	}
 
 	var out string
