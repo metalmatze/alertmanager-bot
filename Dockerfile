@@ -1,8 +1,8 @@
 FROM alpine:latest
 RUN apk add --update ca-certificates
 
-ADD ./alertmanager-telegram /usr/bin/alertmanager-telegram
+ADD ./alertmanager-bot /usr/bin/alertmanager-bot
 
 EXPOSE 8080
 
-ENTRYPOINT ["/usr/bin/alertmanager-telegram"]
+ENTRYPOINT ["/usr/bin/alertmanager-bot"]
