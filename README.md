@@ -63,15 +63,15 @@ Additionally you can always **send commands** to get up-to-date information from
 
 ###### /help
 
-> I'm the AlertManager bot for Prometheus. I will notify you about alerts.
-> You can also ask me about my [/status](#status), [/alerts](#alerts) & [/silences](#silences)
-> 
-> Available commands:
-> [/start](#start) - Subscribe for alerts.
-> [/stop](#stop) - Unsubscribe for alerts.
-> [/status](#status) - Print the current status.
-> [/alerts](#alerts) - List all alerts.
-> [/silences](#silences) - List all silences.
+> I'm the AlertManager bot for Prometheus. I will notify you about alerts.  
+> You can also ask me about my [/status](#status), [/alerts](#alerts) & [/silences](#silences)  
+>   
+> Available commands:  
+> [/start](#start) - Subscribe for alerts.  
+> [/stop](#stop) - Unsubscribe for alerts.  
+> [/status](#status) - Print the current status.  
+> [/alerts](#alerts) - List all alerts.  
+> [/silences](#silences) - List all silences.  
 
 ## Installation
 
@@ -81,27 +81,30 @@ Additionally you can always **send commands** to get up-to-date information from
 
 Start as a command:
 
-	docker run -d \
-		-e 'TELEGRAM_TOKEN=XXX' \
-		-e 'TELEGRAM_ADMIN=1234567' \
-		-e 'ALERTMANAGER_URL=http://alertmanager:9093' \
-		-e 'STORE=/data/users.yml' \
-		-v '/srv/monitoring/alertmanager-bot:/data'
-		--name alertmanager-bot \
-		alertmanager-bot
+```bash
+docker run -d \
+	-e 'TELEGRAM_TOKEN=XXX' \
+	-e 'TELEGRAM_ADMIN=1234567' \
+	-e 'ALERTMANAGER_URL=http://alertmanager:9093' \
+	-e 'STORE=/data/users.yml' \
+	-v '/srv/monitoring/alertmanager-bot:/data'
+	--name alertmanager-bot \
+	alertmanager-bot
+```
 
 Usage within docker-compose:
 
-	alertmanager-bot:
-	  image: metalmatze/alertmanager-bot
-	  environment:
-	    TELEGRAM_TOKEN: XXX
-	    TELEGRAM_ADMIN: '1234567'
-	    ALERTMANAGER_URL: http://alertmanager:9093
-	    STORE: /data/users.yml
-	  volumes:
-	  - /srv/monitoring/alertmanager-bot:/data
-
+```yml
+alertmanager-bot:
+  image: metalmatze/alertmanager-bot
+  environment:
+    TELEGRAM_TOKEN: XXX
+    TELEGRAM_ADMIN: '1234567'
+    ALERTMANAGER_URL: http://alertmanager:9093
+    STORE: /data/users.yml
+  volumes:
+  - /srv/monitoring/alertmanager-bot:/data
+```
 ### Build from source
 
 `go get github.com/metalmatze/alertamanger-bot`
@@ -127,20 +130,24 @@ make install
 
 ## Missing
 
-Commands:
+##### Commands
 
-* `/silence` - show a specific silence
-* `/silence_del` - delete a silence by command
+* `/silence` - show a specific silence  
+* `/silence_del` - delete a silence by command  
 * `/silence_add` - add a silence for a alert by command
 
-Authentication:
+##### Authentication:
 
 Right now only one user can use the bot by giving the bot one telegram user id.  
 Also if the user subscribes the user is marshalled to the store `.yml` file.  
 _Maybe™_ that should be improved for better deployment within orchestration tools.
 
-Other Messengers:
+##### More Messengers:
 
 At the moment I only implemented Telegram, because it's so freakin' easy to do.  
-But I know people that would be interested in a [Slack](https://slack.com/) bot for the alertmanager as well.
+But I know people that would be interested in a [Slack](https://slack.com/) bot for the alertmanager as well.  
 Personally I would also like to take a look at building a [[matrix]](https://matrix.org/) integration.
+
+##### Instrumentation
+
+This bot itself should export metrics at runtime about the current status.
