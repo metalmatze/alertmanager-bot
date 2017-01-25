@@ -1,5 +1,5 @@
 /.env
-/alertmanager-telegram
+/alertmanager-bot
 /coverage.out
 /data.yml
 
