@@ -1,11 +1,14 @@
-# Bot for Prometheus' Alertmanager
+# Bot for Prometheus' Alertmanager [![Build Status](https://drone.github.matthiasloibl.com/api/badges/metalmatze/alertmanager-bot/status.svg)](https://drone.github.matthiasloibl.com/metalmatze/alertmanager-bot)
+
+[![Docker Pulls](https://img.shields.io/docker/pulls/metalmatze/alertmanager-bot.svg?maxAge=604800)](https://hub.docker.com/r/metalmatze/alertmanager-bot)
+[![Go Report Card](https://goreportcard.com/badge/github.com/metalmatze/alertmanager-bot)](https://goreportcard.com/report/github.com/metalmatze/alertmanager-bot)
+
 
 This is the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) bot for 
 [Prometheus](https://prometheus.io/) that notifies you on alerts.  
 Just send him a webhook and he will do the rest.
 
-Additionally you can always **send one of the following commands** to get 
-up-to-date information from the alertmanager.
+Additionally you can always **send commands** to get up-to-date information from the alertmanager.
 
 ## Commands
 
@@ -70,15 +73,74 @@ up-to-date information from the alertmanager.
 > [/alerts](#alerts) - List all alerts.
 > [/silences](#silences) - List all silences.
 
+## Installation
 
-## Development
+### Docker
+
+`docker pull metalmatze/alertamanger-bot`
+
+Start as a command:
+
+	docker run -d \
+		-e 'TELEGRAM_TOKEN=XXX' \
+		-e 'TELEGRAM_ADMIN=1234567' \
+		-e 'ALERTMANAGER_URL=http://alertmanager:9093' \
+		-e 'STORE=/data/users.yml' \
+		-v '/srv/monitoring/alertmanager-bot:/data'
+		--name alertmanager-bot \
+		alertmanager-bot
+
+Usage within docker-compose:
+
+	alertmanager-bot:
+	  image: metalmatze/alertmanager-bot
+	  environment:
+	    TELEGRAM_TOKEN: XXX
+	    TELEGRAM_ADMIN: '1234567'
+	    ALERTMANAGER_URL: http://alertmanager:9093
+	    STORE: /data/users.yml
+	  volumes:
+	  - /srv/monitoring/alertmanager-bot:/data
 
 ### Build from source
 
 `go get github.com/metalmatze/alertamanger-bot`
 
+### Configuration
+
+ENV Variable | Description
+|-------------------|------------------------------------------------------|
+| ALERTMANAGER_URL  | Address of the alertmanager, default: `http://localhost:9093` |
+| LISTEN_ADDR       | Address that the bot listens for webhooks, default: `0.0.0.0:8080` |
+| TELEGRAM_TOKEN    | Token you get from [@botfather](https://telegram.me/botfather) |
+| TELEGRAM_ADMIN    | The Telegram user id for the admin |
+| STORE             | The subscribed users are persisted to the file, default: `data.yml` |
+
+## Development
+
 Build the binary using `make`:
 
 ```
-make build
+make install
 ```
+<!-- TODO: Write more -->
+
+## Missing
+
+Commands:
+
+* `/silence` - show a specific silence
+* `/silence_del` - delete a silence by command
+* `/silence_add` - add a silence for a alert by command
+
+Authentication:
+
+Right now only one user can use the bot by giving the bot one telegram user id.  
+Also if the user subscribes the user is marshalled to the store `.yml` file.  
+_Maybe™_ that should be improved for better deployment within orchestration tools.
+
+Other Messengers:
+
+At the moment I only implemented Telegram, because it's so freakin' easy to do.  
+But I know people that would be interested in a [Slack](https://slack.com/) bot for the alertmanager as well.
+Personally I would also like to take a look at building a [[matrix]](https://matrix.org/) integration.
