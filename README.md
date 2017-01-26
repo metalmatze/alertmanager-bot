@@ -6,9 +6,23 @@
 
 This is the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) bot for 
 [Prometheus](https://prometheus.io/) that notifies you on alerts.  
-Just send him a webhook and he will do the rest.
+Just configure the Alertmanager to send Webhooks to the bot and that's it.
 
 Additionally you can always **send commands** to get up-to-date information from the alertmanager.
+
+### Why?
+
+Alertmanager already integrates a lot of different messengers as receivers for alerts.  
+I want to extend this basic functionality.
+
+Previously the Alertmanager could only talk to you via a chat, but now you can talk back via [commands](#commands).  
+You can ask about current ongoing [alerts](#alerts) and [silences](#silences).  
+In the future I plan to also support silencing via the chat, so you can silences after getting an alert from within the chat.  
+A lot of other stuff can be added!
+
+## Messengers
+
+Right now it supports [Telegram](https://telegram.org/), but I'd like to [add more](#more-messengers) in the future.
 
 ## Commands
 
@@ -144,9 +158,15 @@ _Maybe™_ that should be improved for better deployment within orchestration to
 
 ##### More Messengers
 
-At the moment I only implemented Telegram, because it's so freakin' easy to do.  
-But I know people that would be interested in a [Slack](https://slack.com/) bot for the alertmanager as well.  
-Personally I would also like to take a look at building a [[matrix]](https://matrix.org/) integration.
+At the moment I only implemented Telegram, because it's so freakin' easy to do.
+
+Messengers considered to add in the future:
+
+* [Slack](https://slack.com/)
+* [Mattermost](https://about.mattermost.com/)
+* [Matrix](https://matrix.org/)
+
+If one is missing for you just open an issue.
 
 ##### Instrumentation
 
@@ -154,4 +174,4 @@ This bot itself should export metrics at runtime about the current status.
 
 ##### Logging
 
-The bot currently simply uses stdlib's `log`. Would be better to add something like go-kit logger. 
+The bot currently simply uses stdlib's `log`. Would be better to add something like go-kit logger.
