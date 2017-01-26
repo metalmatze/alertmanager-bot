@@ -77,7 +77,7 @@ Additionally you can always **send commands** to get up-to-date information from
 
 ### Docker
 
-`docker pull metalmatze/alertamanger-bot`
+`docker pull metalmatze/alertmanager-bot`
 
 Start as a command:
 
@@ -107,7 +107,7 @@ alertmanager-bot:
 ```
 ### Build from source
 
-`go get github.com/metalmatze/alertamanger-bot`
+`go get github.com/metalmatze/alertmanager-bot`
 
 ### Configuration
 
