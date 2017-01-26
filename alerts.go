@@ -37,10 +37,10 @@ func AlertMessage(a types.Alert) string {
 	var status, duration string
 	switch a.Status() {
 	case model.AlertFiring:
-		status = "🔥 *" + strings.ToUpper(string(a.Status())) + "* 🔥"
+		status = fmt.Sprintf("🔥 *%s* 🔥", strings.ToUpper(string(a.Status())))
 		duration = fmt.Sprintf("*Started*: %s ago", durafmt.Parse(time.Since(a.StartsAt)))
 	case model.AlertResolved:
-		status = "*" + strings.ToUpper(string(a.Status())) + "*"
+		status = fmt.Sprintf("*%s*", strings.ToUpper(string(a.Status())))
 		duration = fmt.Sprintf(
 			"*Ended*: %s ago\n*Duration*: %s",
 			durafmt.Parse(time.Since(a.EndsAt)),
