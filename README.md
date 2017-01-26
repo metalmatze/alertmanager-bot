@@ -136,13 +136,13 @@ make install
 * `/silence_del` - delete a silence by command  
 * `/silence_add` - add a silence for a alert by command
 
-##### Authentication:
+##### Authentication
 
 Right now only one user can use the bot by giving the bot one telegram user id.  
 Also if the user subscribes the user is marshalled to the store `.yml` file.  
 _Maybe™_ that should be improved for better deployment within orchestration tools.
 
-##### More Messengers:
+##### More Messengers
 
 At the moment I only implemented Telegram, because it's so freakin' easy to do.  
 But I know people that would be interested in a [Slack](https://slack.com/) bot for the alertmanager as well.  
@@ -151,3 +151,7 @@ Personally I would also like to take a look at building a [[matrix]](https://mat
 ##### Instrumentation
 
 This bot itself should export metrics at runtime about the current status.
+
+##### Logging
+
+The bot currently simply uses stdlib's `log`. Would be better to add something like go-kit logger. 
