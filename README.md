@@ -133,6 +133,20 @@ ENV Variable | Description
 | TELEGRAM_ADMIN    | The Telegram user id for the admin |
 | STORE             | The subscribed users are persisted to the file, default: `data.yml` |
 
+#### Alertmanager Configuration 
+
+Now you need to connect the Alertmanager to send alerts to the bot.  
+A webhook is used for that, so make sure your `LISTEN_ADDR` is reachable for the Alertmanager.
+
+For example add this to your `alertmanager.yml` configuration:
+```yaml
+receivers:
+- name: 'alertmananger-bot'
+  webhook_configs:
+  - send_resolved: true
+    url: 'http://alertmanager-bot:8080'
+```
+
 ## Development
 
 Build the binary using `make`:
