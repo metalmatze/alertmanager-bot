@@ -31,7 +31,7 @@ type Config struct {
 
 func main() {
 	log.Println("starting alertmanager-telegram")
-	log.Printf("BuildTime: %s, Commit: %s\n", BuildTime, Commit)
+	log.Printf("buildtime: %s, commit: %s\n", BuildTime, Commit)
 	StartTime = time.Now()
 
 	if err := godotenv.Load(); err != nil {
