@@ -2,11 +2,15 @@ package main
 
 import (
 	"io/ioutil"
+	"log"
+	"os"
 	"sync"
 
 	"github.com/tucnak/telebot"
 	yaml "gopkg.in/yaml.v2"
 )
+
+const fileMode = 0600
 
 // UserStore writes the users to a file for persistence
 type UserStore struct {
@@ -20,6 +24,16 @@ func NewUserStore(file string) (*UserStore, error) {
 	store := &UserStore{
 		file:  file,
 		users: make(map[int]telebot.User),
+	}
+
+	// If file for storing not present create it
+	_, err := os.Stat(store.file)
+	if err != nil {
+		_, err := os.Create(store.file)
+		if err != nil {
+			return nil, err
+		}
+		log.Printf("created %s", store.file)
 	}
 
 	usersBytes, err := ioutil.ReadFile(store.file)
@@ -61,7 +75,7 @@ func (s *UserStore) Add(u telebot.User) error {
 	if err != nil {
 		return err
 	}
-	ioutil.WriteFile(s.file, out, 0644)
+	ioutil.WriteFile(s.file, out, fileMode)
 
 	return nil
 }
@@ -77,7 +91,8 @@ func (s *UserStore) Remove(u telebot.User) error {
 	if err != nil {
 		return err
 	}
-	ioutil.WriteFile(s.file, out, 0644)
+
+	ioutil.WriteFile(s.file, out, fileMode)
 
 	return nil
 }
