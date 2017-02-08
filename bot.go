@@ -67,8 +67,8 @@ func NewBot(logger levels.Levels, c Config) (*Bot, error) {
 	}, nil
 }
 
-// RunWebhook starts a http server and listens for messages to send to the users
-func (b *Bot) RunWebhook() {
+// RunWebserver starts a http server and listens for messages to send to the users
+func (b *Bot) RunWebserver() {
 	messages := make(chan string, 100)
 
 	http.HandleFunc("/", HandleWebhook(messages))

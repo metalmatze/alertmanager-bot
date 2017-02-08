@@ -58,7 +58,7 @@ func main() {
 		logger.Debug().Log("err", err)
 	}
 
-	go bot.RunWebhook()
+	go bot.RunWebserver()
 
 	bot.Run()
 }
