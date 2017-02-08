@@ -41,6 +41,11 @@ Available commands:
 )
 
 var (
+	commandsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "alertmanagerbot",
+		Name:      "commands_total",
+		Help:      "Number of commands received by command name",
+	}, []string{"command"})
 	webhooksCounter = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: "alertmanagerbot",
 		Name:      "webhooks_total",
@@ -49,7 +54,7 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(webhooksCounter)
+	prometheus.MustRegister(commandsCounter, webhooksCounter)
 }
 
 // Bot runs the alertmanager telegram
@@ -121,6 +126,7 @@ func (b *Bot) Run() {
 
 	for message := range messages {
 		if message.Sender.ID != b.Config.TelegramAdmin {
+			commandsCounter.WithLabelValues("dropped").Inc()
 			b.logger.Info().Log(
 				"msg", "dropped message from unallowed sender",
 				"sender_id", message.Sender.ID,
@@ -133,20 +139,28 @@ func (b *Bot) Run() {
 
 		switch message.Text {
 		case commandStart:
+			commandsCounter.WithLabelValues(commandStart).Inc()
 			b.handleStart(message)
 		case commandStop:
+			commandsCounter.WithLabelValues(commandStop).Inc()
 			b.handleStop(message)
 		case commandHelp:
+			commandsCounter.WithLabelValues(commandHelp).Inc()
 			b.handleHelp(message)
 		case commandUsers:
+			commandsCounter.WithLabelValues(commandUsers).Inc()
 			b.handleUsers(message)
 		case commandStatus:
+			commandsCounter.WithLabelValues(commandStatus).Inc()
 			b.handleStatus(message)
 		case commandAlerts:
+			commandsCounter.WithLabelValues(commandAlerts).Inc()
 			b.handleAlerts(message)
 		case commandSilences:
+			commandsCounter.WithLabelValues(commandSilences).Inc()
 			b.handleSilences(message)
 		default:
+			commandsCounter.WithLabelValues("incomprehensible").Inc()
 			b.telegram.SendMessage(
 				message.Chat,
 				"Sorry, I don't understand...",
