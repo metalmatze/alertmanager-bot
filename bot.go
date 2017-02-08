@@ -72,6 +72,8 @@ func (b *Bot) RunWebserver() {
 	messages := make(chan string, 100)
 
 	http.HandleFunc("/", HandleWebhook(messages))
+	http.HandleFunc("/health", handleHealth)
+	http.HandleFunc("/healthz", handleHealth)
 
 	go b.sendWebhook(messages)
 
@@ -83,6 +85,10 @@ func (b *Bot) RunWebserver() {
 	err := http.ListenAndServe(addr, nil)
 	b.logger.Crit().Log("err", err)
 	os.Exit(1)
+}
+
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 // sendWebhook sends messages received via webhook to all subscribed users
