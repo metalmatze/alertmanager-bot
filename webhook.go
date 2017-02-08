@@ -53,6 +53,8 @@ func HandleWebhook(messages chan<- string) http.HandlerFunc {
 			messages <- out
 		}
 
+		webhooksCounter.Inc()
+
 		w.WriteHeader(http.StatusOK)
 	}
 }

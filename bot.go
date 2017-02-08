@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kit/kit/log/levels"
 	"github.com/hako/durafmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tucnak/telebot"
 )
 
@@ -38,6 +39,18 @@ Available commands:
 ` + commandSilences + ` - List all silences.
 `
 )
+
+var (
+	webhooksCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		//Namespace: "",
+		Name: "alertmanagerbot_webhooks_total",
+		Help: "Number of webhooks received by this bot",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(webhooksCounter)
+}
 
 // Bot runs the alertmanager telegram
 type Bot struct {
@@ -72,6 +85,7 @@ func (b *Bot) RunWebserver() {
 	messages := make(chan string, 100)
 
 	http.HandleFunc("/", HandleWebhook(messages))
+	http.Handle("/metrics", prometheus.Handler())
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/healthz", handleHealth)
 
