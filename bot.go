@@ -42,9 +42,9 @@ Available commands:
 
 var (
 	webhooksCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		//Namespace: "",
-		Name: "alertmanagerbot_webhooks_total",
-		Help: "Number of webhooks received by this bot",
+		Namespace: "alertmanagerbot",
+		Name:      "webhooks_total",
+		Help:      "Number of webhooks received by this bot",
 	})
 )
 
