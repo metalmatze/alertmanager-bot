@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+	"os"
 	"time"
 
 	arg "github.com/alexflint/go-arg"
 	"github.com/cenkalti/backoff"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/levels"
 	"github.com/joho/godotenv"
 )
 
@@ -30,20 +32,30 @@ type Config struct {
 }
 
 func main() {
-	log.Println("starting alertmanager-telegram")
-	log.Printf("buildtime: %s, commit: %s\n", BuildTime, Commit)
 	StartTime = time.Now()
 
+	logWriter := log.NewSyncWriter(os.Stderr)
+	logger := levels.New(log.NewLogfmtLogger(logWriter))
+
 	if err := godotenv.Load(); err != nil {
-		log.Println(err)
+		logger.Info().Log(
+			"msg", "can't load .env",
+			"err", err,
+		)
 	}
+
+	logger.Debug().Log(
+		"msg", "starting alertmanager-bot",
+		"buildtime", BuildTime,
+		"commit", Commit,
+	)
 
 	var c Config
 	arg.MustParse(&c)
 
-	bot, err := NewBot(c)
+	bot, err := NewBot(logger, c)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Debug().Log("err", err)
 	}
 
 	go bot.RunWebhook()
@@ -59,7 +71,7 @@ func httpGetBackoff() *backoff.ExponentialBackOff {
 	return b
 }
 
-func httpGetRetry(url string) (*http.Response, error) {
+func httpGetRetry(logger levels.Levels, url string) (*http.Response, error) {
 	var resp *http.Response
 	var err error
 
@@ -77,7 +89,12 @@ func httpGetRetry(url string) (*http.Response, error) {
 	}
 
 	notify := func(err error, dur time.Duration) {
-		log.Printf("retrying in %v: %v", dur, err)
+		logger.Info().Log(
+			"msg", "retrying",
+			"duration", dur,
+			"err", err,
+			"url", url,
+		)
 	}
 
 	if err := backoff.RetryNotify(get, httpGetBackoff(), notify); err != nil {

@@ -37,6 +37,30 @@
 			"revisionTime": "2016-11-17T07:43:51Z"
 		},
 		{
+			"checksumSHA1": "yZX1JnkLqTWcbc6ogOlAWK7/Xro=",
+			"path": "github.com/go-kit/kit/log",
+			"revision": "a59216a7ce3200b6ba0c05ee8b6da44b852833ce",
+			"revisionTime": "2017-02-10T04:40:37Z"
+		},
+		{
+			"checksumSHA1": "5eL4yB7jfMsm4DSpx6/HnU9ENIA=",
+			"path": "github.com/go-kit/kit/log/levels",
+			"revision": "a59216a7ce3200b6ba0c05ee8b6da44b852833ce",
+			"revisionTime": "2017-02-10T04:40:37Z"
+		},
+		{
+			"checksumSHA1": "KxX/Drph+byPXBFIXaCZaCOAnrU=",
+			"path": "github.com/go-logfmt/logfmt",
+			"revision": "390ab7935ee28ec6b286364bba9b4dd6410cb3d5",
+			"revisionTime": "2016-11-15T14:25:13Z"
+		},
+		{
+			"checksumSHA1": "2sj/DbXoXdnPAfjAEyhS0Jj5QL0=",
+			"path": "github.com/go-stack/stack",
+			"revision": "100eb0c0a9c5b306ca2fb4f165df21d80ada4b82",
+			"revisionTime": "2016-05-14T03:44:11Z"
+		},
+		{
 			"checksumSHA1": "M/1HiQFl2DyE+q3pFf8swvAQ3MY=",
 			"origin": "github.com/prometheus/alertmanager/vendor/github.com/golang/protobuf/proto",
 			"path": "github.com/golang/protobuf/proto",
@@ -299,5 +323,5 @@
 			"revisionTime": "2016-09-28T15:37:09Z"
 		}
 	],
-	"rootPath": "github.com/metalmatze/alertmanager-telegram"
+	"rootPath": "github.com/metalmatze/alertmanager-bot"
 }

@@ -185,7 +185,3 @@ If one is missing for you just open an issue.
 ##### Instrumentation
 
 This bot itself should export metrics at runtime about the current status.
-
-##### Logging
-
-The bot currently simply uses stdlib's `log`. Would be better to add something like go-kit logger.

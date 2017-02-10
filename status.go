@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/go-kit/kit/log/levels"
 )
 
 type statusResponse struct {
@@ -20,10 +22,10 @@ type statusResponse struct {
 	} `json:"data"`
 }
 
-func status(alertmanagerURL string) (statusResponse, error) {
+func status(logger levels.Levels, alertmanagerURL string) (statusResponse, error) {
 	var statusResponse statusResponse
 
-	resp, err := httpGetRetry(alertmanagerURL + "/api/v1/status")
+	resp, err := httpGetRetry(logger, alertmanagerURL+"/api/v1/status")
 	if err != nil {
 		return statusResponse, err
 	}
