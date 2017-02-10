@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/go-kit/kit/log/levels"
 	"github.com/hako/durafmt"
 	"github.com/tucnak/telebot"
 )
@@ -40,14 +41,14 @@ Available commands:
 
 // Bot runs the alertmanager telegram
 type Bot struct {
+	logger    levels.Levels
+	telegram  *telebot.Bot
 	Config    Config
 	UserStore *UserStore
-
-	telegram *telebot.Bot
 }
 
 // NewBot creates a Bot with the UserStore and telegram telegram
-func NewBot(c Config) (*Bot, error) {
+func NewBot(logger levels.Levels, c Config) (*Bot, error) {
 	users, err := NewUserStore(c.Store)
 	if err != nil {
 		return nil, err
@@ -59,6 +60,7 @@ func NewBot(c Config) (*Bot, error) {
 	}
 
 	return &Bot{
+		logger:    logger,
 		telegram:  bot,
 		Config:    c,
 		UserStore: users,
@@ -78,7 +80,9 @@ func (b *Bot) RunWebhook() {
 		addr = b.Config.ListenAddr
 	}
 
-	log.Fatalln(http.ListenAndServe(addr, nil))
+	err := http.ListenAndServe(addr, nil)
+	b.logger.Crit().Log("err", err)
+	os.Exit(1)
 }
 
 // sendWebhook sends messages received via webhook to all subscribed users
@@ -97,7 +101,11 @@ func (b *Bot) Run() {
 
 	for message := range messages {
 		if message.Sender.ID != b.Config.TelegramAdmin {
-			log.Printf("dropped message from unallowed sender: %s(%d)", message.Sender.Username, message.Sender.ID)
+			b.logger.Info().Log(
+				"msg", "dropped message from unallowed sender",
+				"sender_id", message.Sender.ID,
+				"sender_username", message.Sender.Username,
+			)
 			continue
 		}
 
@@ -131,13 +139,21 @@ func (b *Bot) Run() {
 func (b *Bot) handleStart(message telebot.Message) {
 	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
 	b.UserStore.Add(message.Sender)
-	log.Printf("User %s(%d) subscribed", message.Sender.Username, message.Sender.ID)
+	b.logger.Info().Log(
+		"user subscribed",
+		"username", message.Sender.Username,
+		"user_id", message.Sender.ID,
+	)
 }
 
 func (b *Bot) handleStop(message telebot.Message) {
 	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
 	b.UserStore.Remove(message.Sender)
-	log.Printf("User %s(%d) unsubscribed", message.Sender.Username, message.Sender.ID)
+	b.logger.Info().Log(
+		"user unsubscribed",
+		"username", message.Sender.Username,
+		"user_id", message.Sender.ID,
+	)
 }
 
 func (b *Bot) handleHelp(message telebot.Message) {
@@ -153,7 +169,7 @@ func (b *Bot) handleUsers(message telebot.Message) {
 }
 
 func (b *Bot) handleStatus(message telebot.Message) {
-	s, err := status(b.Config.AlertmanagerURL)
+	s, err := status(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
 		return
@@ -176,7 +192,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 }
 
 func (b *Bot) handleAlerts(message telebot.Message) {
-	alerts, err := listAlerts(b.Config.AlertmanagerURL)
+	alerts, err := listAlerts(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
 		return
@@ -196,7 +212,7 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 }
 
 func (b *Bot) handleSilences(message telebot.Message) {
-	silences, err := listSilences(b.Config.AlertmanagerURL)
+	silences, err := listSilences(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
 		return

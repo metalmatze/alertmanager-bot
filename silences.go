@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log/levels"
 	"github.com/hako/durafmt"
 	"github.com/prometheus/alertmanager/types"
 )
@@ -24,8 +25,8 @@ type silencesResponse struct {
 	Status string          `json:"status"`
 }
 
-func listSilences(alertmanagerURL string) ([]types.Silence, error) {
-	resp, err := httpGetRetry(alertmanagerURL + "/api/v1/silences")
+func listSilences(logger levels.Levels, alertmanagerURL string) ([]types.Silence, error) {
+	resp, err := httpGetRetry(logger, alertmanagerURL+"/api/v1/silences")
 	if err != nil {
 		return nil, err
 	}

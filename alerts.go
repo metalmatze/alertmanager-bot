@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log/levels"
 	"github.com/hako/durafmt"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
@@ -16,8 +17,8 @@ type alertResponse struct {
 	Alerts []types.Alert `json:"data,omitempty"`
 }
 
-func listAlerts(alertmanagerURL string) ([]types.Alert, error) {
-	resp, err := httpGetRetry(alertmanagerURL + "/api/v1/alerts")
+func listAlerts(logger levels.Levels, alertmanagerURL string) ([]types.Alert, error) {
+	resp, err := httpGetRetry(logger, alertmanagerURL+"/api/v1/alerts")
 	if err != nil {
 		return nil, err
 	}
