@@ -118,6 +118,8 @@ func (b *Bot) Run() {
 			b.handleAlerts(message)
 		case commandSilences:
 			b.handleSilences(message)
+		case commandSilence:
+			b.handleSilence(message)
 		default:
 			b.telegram.SendMessage(
 				message.Chat,
@@ -213,4 +215,26 @@ func (b *Bot) handleSilences(message telebot.Message) {
 	}
 
 	b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+}
+
+func (b *Bot) handleSilence(message telebot.Message) {
+	alerts, err := listAlerts(b.Config.AlertmanagerURL)
+	if err != nil {
+		b.telegram.SendMessage(message.Chat, "err fetching silences", nil)
+	}
+
+	keyboard := [][]string{}
+	for _, alert := range alerts {
+		keyboard = append(keyboard, []string{alert.Name()})
+	}
+
+	options := &telebot.SendOptions{
+		ReplyMarkup: telebot.ReplyMarkup{
+			ForceReply:     true,
+			Selective:      true,
+			CustomKeyboard: keyboard,
+		},
+	}
+
+	b.telegram.SendMessage(message.Chat, "pong", options)
 }
