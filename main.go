@@ -62,13 +62,13 @@ func main() {
 
 	go bot.RunWebserver()
 
-	bot.HandleFunc(commandStart, bot.instrument, bot.handleStart)
-	bot.HandleFunc(commandStop, bot.instrument, bot.handleStop)
-	bot.HandleFunc(commandHelp, bot.instrument, bot.handleHelp)
-	bot.HandleFunc(commandUsers, bot.instrument, bot.handleUsers)
-	bot.HandleFunc(commandStatus, bot.instrument, bot.handleStatus)
-	bot.HandleFunc(commandAlerts, bot.instrument, bot.handleAlerts)
-	bot.HandleFunc(commandSilences, bot.instrument, bot.handleSilences)
+	bot.HandleFunc(commandStart, bot.auth, bot.instrument, bot.handleStart)
+	bot.HandleFunc(commandStop, bot.auth, bot.instrument, bot.handleStop)
+	bot.HandleFunc(commandHelp, bot.auth, bot.instrument, bot.handleHelp)
+	bot.HandleFunc(commandUsers, bot.auth, bot.instrument, bot.handleUsers)
+	bot.HandleFunc(commandStatus, bot.auth, bot.instrument, bot.handleStatus)
+	bot.HandleFunc(commandAlerts, bot.auth, bot.instrument, bot.handleAlerts)
+	bot.HandleFunc(commandSilences, bot.auth, bot.instrument, bot.handleSilences)
 
 	bot.Run()
 }

@@ -130,16 +130,6 @@ func (b *Bot) Run() {
 	b.telegram.Listen(messages, time.Second)
 
 	for message := range messages {
-		if message.Sender.ID != b.Config.TelegramAdmin {
-			commandsCounter.WithLabelValues("dropped").Inc()
-			b.logger.Info().Log(
-				"msg", "dropped message from unallowed sender",
-				"sender_id", message.Sender.ID,
-				"sender_username", message.Sender.Username,
-			)
-			continue
-		}
-
 		b.telegram.SendChatAction(message.Chat, telebot.Typing)
 
 		if handlers, ok := b.commands[message.Text]; ok {
@@ -150,11 +140,20 @@ func (b *Bot) Run() {
 						"err", err,
 					)
 					b.telegram.SendMessage(message.Chat, err.Error(), nil)
-					continue
+					break
 				}
 			}
 		}
 	}
+}
+
+func (b *Bot) auth(message telebot.Message) error {
+	if message.Sender.ID != b.Config.TelegramAdmin {
+		commandsCounter.WithLabelValues("dropped").Inc()
+		return fmt.Errorf("unauthorized")
+	}
+
+	return nil
 }
 
 func (b *Bot) instrument(message telebot.Message) error {
