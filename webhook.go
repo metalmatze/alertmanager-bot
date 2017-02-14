@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/common/model"
 )
 
-// HandleWebhook returns a HandlerFunc that sends messages for users via a channel
+// HandleWebhook returns a HandleFunc that sends messages for users via a channel
 func HandleWebhook(messages chan<- string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {

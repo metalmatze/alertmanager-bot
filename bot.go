@@ -57,13 +57,14 @@ func init() {
 	prometheus.MustRegister(commandsCounter, webhooksCounter)
 }
 
-type HandlerFunc func(telebot.Message)
+// HandleFunc is used to generate the response to a request
+type HandleFunc func(telebot.Message)
 
 // Bot runs the alertmanager telegram
 type Bot struct {
 	logger    levels.Levels
 	telegram  *telebot.Bot
-	commands  map[string][]HandlerFunc
+	commands  map[string][]HandleFunc
 	Config    Config
 	UserStore *UserStore
 }
@@ -83,7 +84,7 @@ func NewBot(logger levels.Levels, c Config) (*Bot, error) {
 	return &Bot{
 		logger:    logger,
 		telegram:  bot,
-		commands:  make(map[string][]HandlerFunc),
+		commands:  make(map[string][]HandleFunc),
 		Config:    c,
 		UserStore: users,
 	}, nil
@@ -119,7 +120,7 @@ func (b *Bot) sendWebhook(messages <-chan string) {
 }
 
 // HandleFunc registers the handler function for the given command
-func (b *Bot) HandleFunc(command string, handlers ...HandlerFunc) {
+func (b *Bot) HandleFunc(command string, handlers ...HandleFunc) {
 	b.commands[command] = handlers
 }
 
