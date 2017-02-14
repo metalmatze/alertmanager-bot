@@ -58,7 +58,7 @@ func init() {
 }
 
 // HandleFunc is used to generate the response to a request
-type HandleFunc func(telebot.Message)
+type HandleFunc func(telebot.Message) error
 
 // Bot runs the alertmanager telegram
 type Bot struct {
@@ -144,69 +144,91 @@ func (b *Bot) Run() {
 
 		if handlers, ok := b.commands[message.Text]; ok {
 			for _, handler := range handlers {
-				handler(message)
+				if err := handler(message); err != nil {
+					b.logger.Info().Log(
+						"msg", "handler returned err",
+						"err", err,
+					)
+					b.telegram.SendMessage(message.Chat, err.Error(), nil)
+					continue
+				}
 			}
 		}
 	}
 }
 
-func (b *Bot) instrument(message telebot.Message) {
+func (b *Bot) instrument(message telebot.Message) error {
 	command := message.Text
 	if _, ok := b.commands[command]; ok {
 		commandsCounter.WithLabelValues(command).Inc()
-	} else {
-		commandsCounter.WithLabelValues("incomprehensible").Inc()
-		b.telegram.SendMessage(
-			message.Chat,
-			"Sorry, I don't understand...",
-			nil,
-		)
+		return nil
 	}
+
+	commandsCounter.WithLabelValues("incomprehensible").Inc()
+	return b.telegram.SendMessage(
+		message.Chat,
+		"Sorry, I don't understand...",
+		nil,
+	)
 }
 
-func (b *Bot) handleStart(message telebot.Message) {
-	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
-	b.UserStore.Add(message.Sender)
+func (b *Bot) handleStart(message telebot.Message) error {
+	if err := b.UserStore.Add(message.Sender); err != nil {
+		b.logger.Error().Log(
+			"msg", "can't remove user from store",
+			"err", err,
+		)
+		return fmt.Errorf("can't remove user %s from store", message.Sender.Username)
+	}
+
 	b.logger.Info().Log(
 		"user subscribed",
 		"username", message.Sender.Username,
 		"user_id", message.Sender.ID,
 	)
+
+	return b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
 }
 
-func (b *Bot) handleStop(message telebot.Message) {
-	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
-	b.UserStore.Remove(message.Sender)
+func (b *Bot) handleStop(message telebot.Message) error {
+	if err := b.UserStore.Remove(message.Sender); err != nil {
+		b.logger.Error().Log(
+			"msg", "can't remove user from store",
+			"err", err,
+		)
+		return fmt.Errorf("can't remove user %s from store", message.Sender.Username)
+	}
 	b.logger.Info().Log(
 		"user unsubscribed",
 		"username", message.Sender.Username,
 		"user_id", message.Sender.ID,
 	)
+
+	return b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
 }
 
-func (b *Bot) handleHelp(message telebot.Message) {
-	b.telegram.SendMessage(message.Chat, responseHelp, nil)
+func (b *Bot) handleHelp(message telebot.Message) error {
+	return b.telegram.SendMessage(message.Chat, responseHelp, nil)
 }
 
-func (b *Bot) handleUsers(message telebot.Message) {
-	b.telegram.SendMessage(message.Chat, fmt.Sprintf(
+func (b *Bot) handleUsers(message telebot.Message) error {
+	return b.telegram.SendMessage(message.Chat, fmt.Sprintf(
 		"Currently %d users are subscribed.",
 		b.UserStore.Len()),
 		nil,
 	)
 }
 
-func (b *Bot) handleStatus(message telebot.Message) {
+func (b *Bot) handleStatus(message telebot.Message) error {
 	s, err := status(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
-		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
-		return
+		return fmt.Errorf("failed to get status: %v", err)
 	}
 
 	uptime := durafmt.Parse(time.Since(s.Data.Uptime))
 	uptimeBot := durafmt.Parse(time.Since(StartTime))
 
-	b.telegram.SendMessage(
+	return b.telegram.SendMessage(
 		message.Chat,
 		fmt.Sprintf(
 			"*AlertManager*\nVersion: %s\nUptime: %s\n*AlertManager Bot*\nVersion: %s\nUptime: %s",
@@ -219,16 +241,14 @@ func (b *Bot) handleStatus(message telebot.Message) {
 	)
 }
 
-func (b *Bot) handleAlerts(message telebot.Message) {
+func (b *Bot) handleAlerts(message telebot.Message) error {
 	alerts, err := listAlerts(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
-		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
-		return
+		return fmt.Errorf("failed to list alerts: %v", err)
 	}
 
 	if len(alerts) == 0 {
-		b.telegram.SendMessage(message.Chat, "No alerts right now! 🎉", nil)
-		return
+		return b.telegram.SendMessage(message.Chat, "No alerts right now! 🎉", nil)
 	}
 
 	var out string
@@ -236,19 +256,17 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 		out = out + AlertMessage(a) + "\n"
 	}
 
-	b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+	return b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 }
 
-func (b *Bot) handleSilences(message telebot.Message) {
+func (b *Bot) handleSilences(message telebot.Message) error {
 	silences, err := listSilences(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
-		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
-		return
+		return fmt.Errorf("failed to list silences: %v", err)
 	}
 
 	if len(silences) == 0 {
-		b.telegram.SendMessage(message.Chat, "No silences right now.", nil)
-		return
+		return b.telegram.SendMessage(message.Chat, "No silences right now.", nil)
 	}
 
 	var out string
@@ -256,5 +274,5 @@ func (b *Bot) handleSilences(message telebot.Message) {
 		out = out + SilenceMessage(silence) + "\n"
 	}
 
-	b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+	return b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 }
