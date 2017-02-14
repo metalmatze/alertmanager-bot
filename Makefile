@@ -31,6 +31,13 @@ lint:
 	fi
 	for PKG in $(PACKAGES); do golint -set_exit_status $$PKG || exit 1; done;
 
+.PHONY: errcheck
+errcheck:
+	@which errcheck > /dev/null; if [ $$? -ne 0 ]; then \
+		$(GO) get -u github.com/kisielk/errcheck; \
+	fi
+	for PKG in $(PACKAGES); do errcheck $$PKG || exit 1; done;
+
 .PHONY: test
 test:
 	@for PKG in $(PACKAGES); do go test -cover -coverprofile $$GOPATH/src/$$PKG/coverage.out $$PKG || exit 1; done;
