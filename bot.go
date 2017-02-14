@@ -63,7 +63,7 @@ type HandlerFunc func(telebot.Message)
 type Bot struct {
 	logger    levels.Levels
 	telegram  *telebot.Bot
-	commands  map[string]HandlerFunc
+	commands  map[string][]HandlerFunc
 	Config    Config
 	UserStore *UserStore
 }
@@ -83,7 +83,7 @@ func NewBot(logger levels.Levels, c Config) (*Bot, error) {
 	return &Bot{
 		logger:    logger,
 		telegram:  bot,
-		commands:  make(map[string]HandlerFunc),
+		commands:  make(map[string][]HandlerFunc),
 		Config:    c,
 		UserStore: users,
 	}, nil
@@ -119,8 +119,8 @@ func (b *Bot) sendWebhook(messages <-chan string) {
 }
 
 // HandleFunc registers the handler function for the given command
-func (b *Bot) HandleFunc(command string, h HandlerFunc) {
-	b.commands[command] = h
+func (b *Bot) HandleFunc(command string, handlers ...HandlerFunc) {
+	b.commands[command] = handlers
 }
 
 // Run the telegram and listen to messages send to the telegram
@@ -141,17 +141,25 @@ func (b *Bot) Run() {
 
 		b.telegram.SendChatAction(message.Chat, telebot.Typing)
 
-		if handler, ok := b.commands[message.Text]; ok {
-			commandsCounter.WithLabelValues(message.Text).Inc()
-			handler(message)
-		} else {
-			commandsCounter.WithLabelValues("incomprehensible").Inc()
-			b.telegram.SendMessage(
-				message.Chat,
-				"Sorry, I don't understand...",
-				nil,
-			)
+		if handlers, ok := b.commands[message.Text]; ok {
+			for _, handler := range handlers {
+				handler(message)
+			}
 		}
+	}
+}
+
+func (b *Bot) instrument(message telebot.Message) {
+	command := message.Text
+	if _, ok := b.commands[command]; ok {
+		commandsCounter.WithLabelValues(command).Inc()
+	} else {
+		commandsCounter.WithLabelValues("incomprehensible").Inc()
+		b.telegram.SendMessage(
+			message.Chat,
+			"Sorry, I don't understand...",
+			nil,
+		)
 	}
 }
 
