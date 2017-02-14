@@ -62,6 +62,14 @@ func main() {
 
 	go bot.RunWebserver()
 
+	bot.HandleFunc(commandStart, bot.handleStart)
+	bot.HandleFunc(commandStop, bot.handleStop)
+	bot.HandleFunc(commandHelp, bot.handleHelp)
+	bot.HandleFunc(commandUsers, bot.handleUsers)
+	bot.HandleFunc(commandStatus, bot.handleStatus)
+	bot.HandleFunc(commandAlerts, bot.handleAlerts)
+	bot.HandleFunc(commandSilences, bot.handleSilences)
+
 	bot.Run()
 }
 

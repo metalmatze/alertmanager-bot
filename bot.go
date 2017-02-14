@@ -57,10 +57,13 @@ func init() {
 	prometheus.MustRegister(commandsCounter, webhooksCounter)
 }
 
+type HandlerFunc func(telebot.Message)
+
 // Bot runs the alertmanager telegram
 type Bot struct {
 	logger    levels.Levels
 	telegram  *telebot.Bot
+	commands  map[string]HandlerFunc
 	Config    Config
 	UserStore *UserStore
 }
@@ -80,6 +83,7 @@ func NewBot(logger levels.Levels, c Config) (*Bot, error) {
 	return &Bot{
 		logger:    logger,
 		telegram:  bot,
+		commands:  make(map[string]HandlerFunc),
 		Config:    c,
 		UserStore: users,
 	}, nil
@@ -114,6 +118,11 @@ func (b *Bot) sendWebhook(messages <-chan string) {
 	}
 }
 
+// HandleFunc registers the handler function for the given command
+func (b *Bot) HandleFunc(command string, h HandlerFunc) {
+	b.commands[command] = h
+}
+
 // Run the telegram and listen to messages send to the telegram
 func (b *Bot) Run() {
 	messages := make(chan telebot.Message, 100)
@@ -132,29 +141,10 @@ func (b *Bot) Run() {
 
 		b.telegram.SendChatAction(message.Chat, telebot.Typing)
 
-		switch message.Text {
-		case commandStart:
-			commandsCounter.WithLabelValues(commandStart).Inc()
-			b.handleStart(message)
-		case commandStop:
-			commandsCounter.WithLabelValues(commandStop).Inc()
-			b.handleStop(message)
-		case commandHelp:
-			commandsCounter.WithLabelValues(commandHelp).Inc()
-			b.handleHelp(message)
-		case commandUsers:
-			commandsCounter.WithLabelValues(commandUsers).Inc()
-			b.handleUsers(message)
-		case commandStatus:
-			commandsCounter.WithLabelValues(commandStatus).Inc()
-			b.handleStatus(message)
-		case commandAlerts:
-			commandsCounter.WithLabelValues(commandAlerts).Inc()
-			b.handleAlerts(message)
-		case commandSilences:
-			commandsCounter.WithLabelValues(commandSilences).Inc()
-			b.handleSilences(message)
-		default:
+		if handler, ok := b.commands[message.Text]; ok {
+			commandsCounter.WithLabelValues(message.Text).Inc()
+			handler(message)
+		} else {
 			commandsCounter.WithLabelValues("incomprehensible").Inc()
 			b.telegram.SendMessage(
 				message.Chat,
