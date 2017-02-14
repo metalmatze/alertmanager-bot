@@ -96,12 +96,7 @@ func (b *Bot) RunWebserver() {
 
 	go b.sendWebhook(messages)
 
-	addr := ":8080"
-	if b.Config.ListenAddr != "" {
-		addr = b.Config.ListenAddr
-	}
-
-	err := http.ListenAndServe(addr, nil)
+	err := http.ListenAndServe(b.Config.ListenAddr, nil)
 	b.logger.Crit().Log("err", err)
 	os.Exit(1)
 }
