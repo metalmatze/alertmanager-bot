@@ -13,6 +13,11 @@ import (
 // HandleWebhook returns a HandlerFunc that sends messages for users via a channel
 func HandleWebhook(messages chan<- string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
 		var webhook notify.WebhookMessage
 
 		decoder := json.NewDecoder(r.Body)
@@ -52,6 +57,8 @@ func HandleWebhook(messages chan<- string) http.HandlerFunc {
 
 			messages <- out
 		}
+
+		webhooksCounter.Inc()
 
 		w.WriteHeader(http.StatusOK)
 	}

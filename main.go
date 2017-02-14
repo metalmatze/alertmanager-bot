@@ -50,15 +50,17 @@ func main() {
 		"commit", Commit,
 	)
 
-	var c Config
-	arg.MustParse(&c)
+	config := Config{
+		ListenAddr: ":8080",
+	}
+	arg.MustParse(&config)
 
-	bot, err := NewBot(logger, c)
+	bot, err := NewBot(logger, config)
 	if err != nil {
 		logger.Debug().Log("err", err)
 	}
 
-	go bot.RunWebhook()
+	go bot.RunWebserver()
 
 	bot.Run()
 }

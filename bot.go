@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-kit/kit/log/levels"
 	"github.com/hako/durafmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tucnak/telebot"
 )
 
@@ -39,6 +40,23 @@ Available commands:
 `
 )
 
+var (
+	commandsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "alertmanagerbot",
+		Name:      "commands_total",
+		Help:      "Number of commands received by command name",
+	}, []string{"command"})
+	webhooksCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "alertmanagerbot",
+		Name:      "webhooks_total",
+		Help:      "Number of webhooks received by this bot",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(commandsCounter, webhooksCounter)
+}
+
 // Bot runs the alertmanager telegram
 type Bot struct {
 	logger    levels.Levels
@@ -67,22 +85,24 @@ func NewBot(logger levels.Levels, c Config) (*Bot, error) {
 	}, nil
 }
 
-// RunWebhook starts a http server and listens for messages to send to the users
-func (b *Bot) RunWebhook() {
+// RunWebserver starts a http server and listens for messages to send to the users
+func (b *Bot) RunWebserver() {
 	messages := make(chan string, 100)
 
 	http.HandleFunc("/", HandleWebhook(messages))
+	http.Handle("/metrics", prometheus.Handler())
+	http.HandleFunc("/health", handleHealth)
+	http.HandleFunc("/healthz", handleHealth)
 
 	go b.sendWebhook(messages)
 
-	addr := ":8080"
-	if b.Config.ListenAddr != "" {
-		addr = b.Config.ListenAddr
-	}
-
-	err := http.ListenAndServe(addr, nil)
+	err := http.ListenAndServe(b.Config.ListenAddr, nil)
 	b.logger.Crit().Log("err", err)
 	os.Exit(1)
+}
+
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 // sendWebhook sends messages received via webhook to all subscribed users
@@ -101,6 +121,7 @@ func (b *Bot) Run() {
 
 	for message := range messages {
 		if message.Sender.ID != b.Config.TelegramAdmin {
+			commandsCounter.WithLabelValues("dropped").Inc()
 			b.logger.Info().Log(
 				"msg", "dropped message from unallowed sender",
 				"sender_id", message.Sender.ID,
@@ -113,20 +134,28 @@ func (b *Bot) Run() {
 
 		switch message.Text {
 		case commandStart:
+			commandsCounter.WithLabelValues(commandStart).Inc()
 			b.handleStart(message)
 		case commandStop:
+			commandsCounter.WithLabelValues(commandStop).Inc()
 			b.handleStop(message)
 		case commandHelp:
+			commandsCounter.WithLabelValues(commandHelp).Inc()
 			b.handleHelp(message)
 		case commandUsers:
+			commandsCounter.WithLabelValues(commandUsers).Inc()
 			b.handleUsers(message)
 		case commandStatus:
+			commandsCounter.WithLabelValues(commandStatus).Inc()
 			b.handleStatus(message)
 		case commandAlerts:
+			commandsCounter.WithLabelValues(commandAlerts).Inc()
 			b.handleAlerts(message)
 		case commandSilences:
+			commandsCounter.WithLabelValues(commandSilences).Inc()
 			b.handleSilences(message)
 		default:
+			commandsCounter.WithLabelValues("incomprehensible").Inc()
 			b.telegram.SendMessage(
 				message.Chat,
 				"Sorry, I don't understand...",
