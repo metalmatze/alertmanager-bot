@@ -64,6 +64,11 @@ type TelegramContext struct {
 }
 
 // User returns the user of the incoming message
+func (c *TelegramContext) Broker() string {
+	return c.broker.Name()
+}
+
+// User returns the user of the incoming message
 func (c *TelegramContext) User() telebot.User {
 	return c.message.Sender
 }
