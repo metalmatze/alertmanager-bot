@@ -65,13 +65,22 @@ func main() {
 	}
 	go aBot.RunWebserver()
 
-	b, err := bot.New(config.TelegramToken)
+	b, err := bot.New()
 	if err != nil {
 		logger.Error().Log(
 			"msg", "failed to create bot",
 			"err", err,
 		)
 	}
+
+	telegram, err := bot.NewTelegramBroker(b, config.TelegramToken)
+	if err != nil {
+		logger.Error().Log(
+			"msg", "failed to create telegram broker",
+			"err", err,
+		)
+	}
+	b.AddBroker(telegram)
 
 	// TODO add middlewares
 	//b.HandleFunc(commandStart, bot.auth, bot.instrument, bot.handleStart)

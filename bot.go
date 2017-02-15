@@ -107,7 +107,7 @@ func (b *AlertmanagerBot) sendWebhook(messages <-chan string) {
 	//}
 }
 
-func (b *AlertmanagerBot) handleStart(c *bot.Context) error {
+func (b *AlertmanagerBot) handleStart(c bot.Context) error {
 	if err := b.UserStore.Add(c.User()); err != nil {
 		b.logger.Error().Log(
 			"msg", "can't remove user from store",
@@ -125,7 +125,7 @@ func (b *AlertmanagerBot) handleStart(c *bot.Context) error {
 	return c.String(fmt.Sprintf(responseStart, c.User().FirstName))
 }
 
-func (b *AlertmanagerBot) handleStop(c *bot.Context) error {
+func (b *AlertmanagerBot) handleStop(c bot.Context) error {
 	if err := b.UserStore.Remove(c.User()); err != nil {
 		b.logger.Error().Log(
 			"msg", "can't remove user from store",
@@ -142,15 +142,15 @@ func (b *AlertmanagerBot) handleStop(c *bot.Context) error {
 	return c.String(fmt.Sprintf(responseStop, c.User().FirstName))
 }
 
-func (b *AlertmanagerBot) handleHelp(c *bot.Context) error {
+func (b *AlertmanagerBot) handleHelp(c bot.Context) error {
 	return c.String(responseHelp)
 }
 
-func (b *AlertmanagerBot) handleUsers(c *bot.Context) error {
+func (b *AlertmanagerBot) handleUsers(c bot.Context) error {
 	return c.String(fmt.Sprintf("Currently %d users are subscribed.", b.UserStore.Len()))
 }
 
-func (b *AlertmanagerBot) handleStatus(c *bot.Context) error {
+func (b *AlertmanagerBot) handleStatus(c bot.Context) error {
 	s, err := status(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
 		return fmt.Errorf("failed to get status: %v", err)
@@ -170,7 +170,7 @@ func (b *AlertmanagerBot) handleStatus(c *bot.Context) error {
 	return c.Markdown(message)
 }
 
-func (b *AlertmanagerBot) handleAlerts(c *bot.Context) error {
+func (b *AlertmanagerBot) handleAlerts(c bot.Context) error {
 	alerts, err := listAlerts(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
 		return fmt.Errorf("failed to list alerts: %v", err)
@@ -188,7 +188,7 @@ func (b *AlertmanagerBot) handleAlerts(c *bot.Context) error {
 	return c.Markdown(out)
 }
 
-func (b *AlertmanagerBot) handleSilences(c *bot.Context) error {
+func (b *AlertmanagerBot) handleSilences(c bot.Context) error {
 	silences, err := listSilences(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
 		return fmt.Errorf("failed to list silences: %v", err)
