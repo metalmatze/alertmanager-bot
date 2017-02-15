@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-kit/kit/log/levels"
 	"github.com/hako/durafmt"
+	"github.com/metalmatze/alertmanager-bot/bot"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/tucnak/telebot"
 )
 
 const (
@@ -57,41 +57,29 @@ func init() {
 	prometheus.MustRegister(commandsCounter, webhooksCounter)
 }
 
-// HandleFunc is used to generate the response to a request
-type HandleFunc func(telebot.Message) error
-
-// Bot runs the alertmanager telegram
-type Bot struct {
+// AlertmanagerBot runs the alertmanager telegram
+type AlertmanagerBot struct {
 	logger    levels.Levels
-	telegram  *telebot.Bot
-	commands  map[string][]HandleFunc
 	Config    Config
 	UserStore *UserStore
 }
 
-// NewBot creates a Bot with the UserStore and telegram telegram
-func NewBot(logger levels.Levels, c Config) (*Bot, error) {
+// NewAlertmanagerBot creates a AlertmanagerBot with the UserStore and telegram telegram
+func NewAlertmanagerBot(logger levels.Levels, c Config) (*AlertmanagerBot, error) {
 	users, err := NewUserStore(c.Store)
 	if err != nil {
 		return nil, err
 	}
 
-	bot, err := telebot.NewBot(c.TelegramToken)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Bot{
+	return &AlertmanagerBot{
 		logger:    logger,
-		telegram:  bot,
-		commands:  make(map[string][]HandleFunc),
 		Config:    c,
 		UserStore: users,
 	}, nil
 }
 
 // RunWebserver starts a http server and listens for messages to send to the users
-func (b *Bot) RunWebserver() {
+func (b *AlertmanagerBot) RunWebserver() {
 	messages := make(chan string, 100)
 
 	http.HandleFunc("/", HandleWebhook(messages))
@@ -111,114 +99,58 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 // sendWebhook sends messages received via webhook to all subscribed users
-func (b *Bot) sendWebhook(messages <-chan string) {
-	for m := range messages {
-		for _, user := range b.UserStore.List() {
-			b.telegram.SendMessage(user, m, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
-		}
-	}
+func (b *AlertmanagerBot) sendWebhook(messages <-chan string) {
+	//for m := range messages {
+	//	for _, user := range b.UserStore.List() {
+	//		b.telegram.SendMessage(user, m, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+	//	}
+	//}
 }
 
-// HandleFunc registers the handler function for the given command
-func (b *Bot) HandleFunc(command string, handlers ...HandleFunc) {
-	b.commands[command] = handlers
-}
-
-// Run the telegram and listen to messages send to the telegram
-func (b *Bot) Run() {
-	messages := make(chan telebot.Message, 100)
-	b.telegram.Listen(messages, time.Second)
-
-	for message := range messages {
-		b.telegram.SendChatAction(message.Chat, telebot.Typing)
-
-		if handlers, ok := b.commands[message.Text]; ok {
-			for _, handler := range handlers {
-				if err := handler(message); err != nil {
-					b.logger.Info().Log(
-						"msg", "handler returned err",
-						"err", err,
-					)
-					b.telegram.SendMessage(message.Chat, err.Error(), nil)
-					break
-				}
-			}
-		}
-	}
-}
-
-func (b *Bot) auth(message telebot.Message) error {
-	if message.Sender.ID != b.Config.TelegramAdmin {
-		commandsCounter.WithLabelValues("dropped").Inc()
-		return fmt.Errorf("unauthorized")
-	}
-
-	return nil
-}
-
-func (b *Bot) instrument(message telebot.Message) error {
-	command := message.Text
-	if _, ok := b.commands[command]; ok {
-		commandsCounter.WithLabelValues(command).Inc()
-		return nil
-	}
-
-	commandsCounter.WithLabelValues("incomprehensible").Inc()
-	return b.telegram.SendMessage(
-		message.Chat,
-		"Sorry, I don't understand...",
-		nil,
-	)
-}
-
-func (b *Bot) handleStart(message telebot.Message) error {
-	if err := b.UserStore.Add(message.Sender); err != nil {
+func (b *AlertmanagerBot) handleStart(c *bot.Context) error {
+	if err := b.UserStore.Add(c.User()); err != nil {
 		b.logger.Error().Log(
 			"msg", "can't remove user from store",
 			"err", err,
 		)
-		return fmt.Errorf("can't remove user %s from store", message.Sender.Username)
+		return fmt.Errorf("can't remove user %s from store", c.User().Username)
 	}
 
 	b.logger.Info().Log(
 		"user subscribed",
-		"username", message.Sender.Username,
-		"user_id", message.Sender.ID,
+		"username", c.User().Username,
+		"user_id", c.User().ID,
 	)
 
-	return b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
+	return c.String(fmt.Sprintf(responseStart, c.User().FirstName))
 }
 
-func (b *Bot) handleStop(message telebot.Message) error {
-	if err := b.UserStore.Remove(message.Sender); err != nil {
+func (b *AlertmanagerBot) handleStop(c *bot.Context) error {
+	if err := b.UserStore.Remove(c.User()); err != nil {
 		b.logger.Error().Log(
 			"msg", "can't remove user from store",
 			"err", err,
 		)
-		return fmt.Errorf("can't remove user %s from store", message.Sender.Username)
+		return fmt.Errorf("can't remove user %s from store", c.User().Username)
 	}
 	b.logger.Info().Log(
 		"user unsubscribed",
-		"username", message.Sender.Username,
-		"user_id", message.Sender.ID,
+		"username", c.User().Username,
+		"user_id", c.User().ID,
 	)
 
-	return b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
+	return c.String(fmt.Sprintf(responseStop, c.User().FirstName))
 }
 
-func (b *Bot) handleHelp(message telebot.Message) error {
-	return b.telegram.SendMessage(message.Chat, responseHelp, nil)
+func (b *AlertmanagerBot) handleHelp(c *bot.Context) error {
+	return c.String(responseHelp)
 }
 
-func (b *Bot) handleUsers(message telebot.Message) error {
-	return b.telegram.SendMessage(message.Chat, fmt.Sprintf(
-		"Currently %d users are subscribed.",
-		b.UserStore.Len()),
-		nil,
-	)
+func (b *AlertmanagerBot) handleUsers(c *bot.Context) error {
+	return c.String(fmt.Sprintf("Currently %d users are subscribed.", b.UserStore.Len()))
 }
 
-func (b *Bot) handleStatus(message telebot.Message) error {
+func (b *AlertmanagerBot) handleStatus(c *bot.Context) error {
 	s, err := status(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
 		return fmt.Errorf("failed to get status: %v", err)
@@ -227,27 +159,25 @@ func (b *Bot) handleStatus(message telebot.Message) error {
 	uptime := durafmt.Parse(time.Since(s.Data.Uptime))
 	uptimeBot := durafmt.Parse(time.Since(StartTime))
 
-	return b.telegram.SendMessage(
-		message.Chat,
-		fmt.Sprintf(
-			"*AlertManager*\nVersion: %s\nUptime: %s\n*AlertManager Bot*\nVersion: %s\nUptime: %s",
-			s.Data.VersionInfo.Version,
-			uptime,
-			Commit,
-			uptimeBot,
-		),
-		&telebot.SendOptions{ParseMode: telebot.ModeMarkdown},
+	message := fmt.Sprintf(
+		"*AlertManager*\nVersion: %s\nUptime: %s\n*AlertManager Bot*\nVersion: %s\nUptime: %s",
+		s.Data.VersionInfo.Version,
+		uptime,
+		Commit,
+		uptimeBot,
 	)
+
+	return c.Markdown(message)
 }
 
-func (b *Bot) handleAlerts(message telebot.Message) error {
+func (b *AlertmanagerBot) handleAlerts(c *bot.Context) error {
 	alerts, err := listAlerts(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
 		return fmt.Errorf("failed to list alerts: %v", err)
 	}
 
 	if len(alerts) == 0 {
-		return b.telegram.SendMessage(message.Chat, "No alerts right now! 🎉", nil)
+		return c.String("No alerts right now! 🎉")
 	}
 
 	var out string
@@ -255,17 +185,17 @@ func (b *Bot) handleAlerts(message telebot.Message) error {
 		out = out + AlertMessage(a) + "\n"
 	}
 
-	return b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+	return c.Markdown(out)
 }
 
-func (b *Bot) handleSilences(message telebot.Message) error {
+func (b *AlertmanagerBot) handleSilences(c *bot.Context) error {
 	silences, err := listSilences(b.logger, b.Config.AlertmanagerURL)
 	if err != nil {
 		return fmt.Errorf("failed to list silences: %v", err)
 	}
 
 	if len(silences) == 0 {
-		return b.telegram.SendMessage(message.Chat, "No silences right now.", nil)
+		return c.String("No silences right now.")
 	}
 
 	var out string
@@ -273,5 +203,5 @@ func (b *Bot) handleSilences(message telebot.Message) error {
 		out = out + SilenceMessage(silence) + "\n"
 	}
 
-	return b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+	return c.Markdown(out)
 }

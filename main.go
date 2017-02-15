@@ -11,6 +11,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/levels"
 	"github.com/joho/godotenv"
+	"github.com/metalmatze/alertmanager-bot/bot"
 )
 
 var (
@@ -55,22 +56,40 @@ func main() {
 	}
 	arg.MustParse(&config)
 
-	bot, err := NewBot(logger, config)
+	aBot, err := NewAlertmanagerBot(logger, config)
 	if err != nil {
-		logger.Debug().Log("err", err)
+		logger.Error().Log(
+			"msg", "failed to create alertmanager bot",
+			"err", err,
+		)
+	}
+	go aBot.RunWebserver()
+
+	b, err := bot.New(config.TelegramToken)
+	if err != nil {
+		logger.Error().Log(
+			"msg", "failed to create bot",
+			"err", err,
+		)
 	}
 
-	go bot.RunWebserver()
+	// TODO add middlewares
+	//b.HandleFunc(commandStart, bot.auth, bot.instrument, bot.handleStart)
 
-	bot.HandleFunc(commandStart, bot.auth, bot.instrument, bot.handleStart)
-	bot.HandleFunc(commandStop, bot.auth, bot.instrument, bot.handleStop)
-	bot.HandleFunc(commandHelp, bot.auth, bot.instrument, bot.handleHelp)
-	bot.HandleFunc(commandUsers, bot.auth, bot.instrument, bot.handleUsers)
-	bot.HandleFunc(commandStatus, bot.auth, bot.instrument, bot.handleStatus)
-	bot.HandleFunc(commandAlerts, bot.auth, bot.instrument, bot.handleAlerts)
-	bot.HandleFunc(commandSilences, bot.auth, bot.instrument, bot.handleSilences)
+	b.HandleFunc(commandStart, aBot.handleStart)
+	b.HandleFunc(commandStop, aBot.handleStop)
+	b.HandleFunc(commandHelp, aBot.handleHelp)
+	b.HandleFunc(commandUsers, aBot.handleUsers)
+	b.HandleFunc(commandStatus, aBot.handleStatus)
+	b.HandleFunc(commandAlerts, aBot.handleAlerts)
+	b.HandleFunc(commandSilences, aBot.handleSilences)
 
-	bot.Run()
+	if err := b.Run(); err != nil {
+		logger.Error().Log(
+			"msg", "failed to run bot",
+			"err", err,
+		)
+	}
 }
 
 func httpGetBackoff() *backoff.ExponentialBackOff {
