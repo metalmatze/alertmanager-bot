@@ -63,15 +63,22 @@ type TelegramContext struct {
 	message telebot.Message
 }
 
-// User returns the user of the incoming message
+// Broker returns the name of the broker
 func (c *TelegramContext) Broker() string {
 	return c.broker.Name()
+}
+
+// Raw returns the raw text of the incoming message
+func (c *TelegramContext) Raw() string {
+	return c.message.Text
 }
 
 // User returns the user of the incoming message
 func (c *TelegramContext) User() telebot.User {
 	return c.message.Sender
 }
+
+// Write
 
 // String sends a string back to the user
 func (c *TelegramContext) String(msg string) error {
