@@ -26,10 +26,11 @@ var (
 // Config knows all configurations from ENV
 type Config struct {
 	AlertmanagerURL string `arg:"env:ALERTMANAGER_URL"`
+	ListenAddr      string `arg:"env:LISTEN_ADDR"`
+	SlackToken      string `arg:"env:SLACK_TOKEN"`
+	Store           string `arg:"env:STORE"`
 	TelegramToken   string `arg:"env:TELEGRAM_TOKEN"`
 	TelegramAdmin   int    `arg:"env:TELEGRAM_ADMIN"`
-	Store           string `arg:"env:STORE"`
-	ListenAddr      string `arg:"env:LISTEN_ADDR"`
 }
 
 func main() {
@@ -74,6 +75,15 @@ func main() {
 			"err", err,
 		)
 	}
+
+	slack, err := bot.NewSlackBroker(b, config.SlackToken)
+	if err != nil {
+		logger.Error().Log(
+			"msg", "failed to create slack broker",
+			"err", err,
+		)
+	}
+	b.AddBroker(slack)
 
 	telegram, err := bot.NewTelegramBroker(b, config.TelegramToken)
 	if err != nil {
