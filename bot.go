@@ -79,9 +79,7 @@ func NewAlertmanagerBot(logger levels.Levels, c Config) (*AlertmanagerBot, error
 }
 
 // RunWebserver starts a http server and listens for messages to send to the users
-func (b *AlertmanagerBot) RunWebserver() {
-	messages := make(chan string, 100)
-
+func (b *AlertmanagerBot) RunWebserver(messages chan<- string) {
 	http.HandleFunc("/", HandleWebhook(messages))
 	http.Handle("/metrics", prometheus.Handler())
 	http.HandleFunc("/health", handleHealth)

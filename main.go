@@ -63,7 +63,9 @@ func main() {
 			"err", err,
 		)
 	}
-	go alertmanagerBot.RunWebserver()
+
+	messages := make(chan string, 1024)
+	go alertmanagerBot.RunWebserver(messages)
 
 	b, err := bot.New()
 	if err != nil {
