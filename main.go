@@ -56,14 +56,14 @@ func main() {
 	}
 	arg.MustParse(&config)
 
-	aBot, err := NewAlertmanagerBot(logger, config)
+	alertmanagerBot, err := NewAlertmanagerBot(logger, config)
 	if err != nil {
 		logger.Error().Log(
 			"msg", "failed to create alertmanager bot",
 			"err", err,
 		)
 	}
-	go aBot.RunWebserver()
+	go alertmanagerBot.RunWebserver()
 
 	b, err := bot.New()
 	if err != nil {
@@ -84,13 +84,13 @@ func main() {
 
 	b.Use(bot.Auth(config.TelegramAdmin), bot.Instrument(commandsCounter))
 
-	b.HandleFunc(commandStart, aBot.handleStart)
-	b.HandleFunc(commandStop, aBot.handleStop)
-	b.HandleFunc(commandHelp, aBot.handleHelp)
-	b.HandleFunc(commandUsers, aBot.handleUsers)
-	b.HandleFunc(commandStatus, aBot.handleStatus)
-	b.HandleFunc(commandAlerts, aBot.handleAlerts)
-	b.HandleFunc(commandSilences, aBot.handleSilences)
+	b.HandleFunc(commandStart, alertmanagerBot.handleStart)
+	b.HandleFunc(commandStop, alertmanagerBot.handleStop)
+	b.HandleFunc(commandHelp, alertmanagerBot.handleHelp)
+	b.HandleFunc(commandUsers, alertmanagerBot.handleUsers)
+	b.HandleFunc(commandStatus, alertmanagerBot.handleStatus)
+	b.HandleFunc(commandAlerts, alertmanagerBot.handleAlerts)
+	b.HandleFunc(commandSilences, alertmanagerBot.handleSilences)
 
 	if err := b.Run(); err != nil {
 		logger.Error().Log(

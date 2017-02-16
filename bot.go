@@ -87,8 +87,6 @@ func (b *AlertmanagerBot) RunWebserver() {
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/healthz", handleHealth)
 
-	go b.sendWebhook(messages)
-
 	err := http.ListenAndServe(b.Config.ListenAddr, nil)
 	b.logger.Crit().Log("err", err)
 	os.Exit(1)
@@ -96,15 +94,6 @@ func (b *AlertmanagerBot) RunWebserver() {
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-}
-
-// sendWebhook sends messages received via webhook to all subscribed users
-func (b *AlertmanagerBot) sendWebhook(messages <-chan string) {
-	//for m := range messages {
-	//	for _, user := range b.UserStore.List() {
-	//		b.telegram.SendMessage(user, m, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
-	//	}
-	//}
 }
 
 func (b *AlertmanagerBot) handleStart(c bot.Context) error {
