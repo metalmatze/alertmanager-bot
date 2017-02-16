@@ -82,8 +82,7 @@ func main() {
 	}
 	b.AddBroker(telegram)
 
-	// TODO add middlewares
-	//b.HandleFunc(commandStart, bot.auth, bot.instrument, bot.handleStart)
+	b.Use(bot.Auth(config.TelegramAdmin), bot.Instrument(commandsCounter))
 
 	b.HandleFunc(commandStart, aBot.handleStart)
 	b.HandleFunc(commandStop, aBot.handleStop)

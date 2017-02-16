@@ -39,11 +39,18 @@ func (b *TelegramBroker) Run(in chan<- Context) {
 	for message := range messages {
 		b.telegram.SendChatAction(message.Chat, telebot.Typing)
 
-		//ctx := &Context{engine: e, message: message}
 		ctx := &TelegramContext{broker: b, message: message}
 
 		if handlers, ok := b.engine.commands[message.Text]; ok {
-			for _, handler := range handlers {
+			handlers1 := append(b.engine.middlewares, handlers...)
+			for _, handler := range handlers1 {
+				if err := handler(ctx); err != nil {
+					b.telegram.SendMessage(message.Chat, err.Error(), nil)
+					break
+				}
+			}
+		} else {
+			for _, handler := range b.engine.notFound {
 				if err := handler(ctx); err != nil {
 					b.telegram.SendMessage(message.Chat, err.Error(), nil)
 					break
