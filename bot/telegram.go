@@ -32,7 +32,7 @@ func (b *TelegramBroker) Name() string {
 }
 
 // Run the TelegramBroker and receive incoming messages via channel
-func (b *TelegramBroker) Run(in chan<- Context) {
+func (b *TelegramBroker) Run(done chan<- bool, in chan<- Context) {
 	messages := make(chan telebot.Message, 100)
 	b.telegram.Listen(messages, time.Second)
 
@@ -59,6 +59,7 @@ func (b *TelegramBroker) Run(in chan<- Context) {
 		}
 	}
 
+	done <- true
 }
 
 // TelegramContext implements the Context interface and

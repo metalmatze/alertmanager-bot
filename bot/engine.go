@@ -33,9 +33,15 @@ func New() (*Engine, error) {
 // Run the telegram and listen to messages send to the telegram
 func (e *Engine) Run() error {
 	in := make(chan Context, 2014)
+	done := make(chan bool)
+
 	for _, b := range e.brokers {
-		b.Run(in)
+		go b.Run(done, in)
 	}
+
+	<-done
+	close(in)
+
 	return nil
 }
 
