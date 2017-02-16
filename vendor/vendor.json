@@ -121,6 +121,12 @@
 			"revisionTime": "2016-06-09T17:09:29Z"
 		},
 		{
+			"checksumSHA1": "oNrSJkPTYsPtwH9/pUXOTIjVuks=",
+			"path": "github.com/nlopes/slack",
+			"revision": "6519657c021b7add19c4ef48220140cca0b1657b",
+			"revisionTime": "2017-02-11T11:26:27Z"
+		},
+		{
 			"checksumSHA1": "zKKp5SZ3d3ycKe4EKMNT0BqAWBw=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
 			"path": "github.com/pmezard/go-difflib/difflib",
@@ -315,6 +321,12 @@
 			"path": "golang.org/x/net/context/ctxhttp",
 			"revision": "1fd0950d482e47f346a7a538eae983f60f4304bb",
 			"revisionTime": "2016-11-25T12:50:51Z"
+		},
+		{
+			"checksumSHA1": "7EZyXN0EmZLgGxZxK01IJua4c8o=",
+			"path": "golang.org/x/net/websocket",
+			"revision": "f2499483f923065a842d38eb4c7f1927e6fc6e6d",
+			"revisionTime": "2017-01-14T04:22:49Z"
 		},
 		{
 			"checksumSHA1": "12GqsW8PiRPnezDDy0v4brZrndM=",
