@@ -9,7 +9,7 @@ type HandlerChain []HandleFunc
 // Engine is the foundation for the bot
 // Create a new one by using New()
 type Engine struct {
-	broker      []Broker
+	brokers     []Broker
 	middlewares HandlerChain
 	commands    map[string]HandlerChain
 	notFound    HandlerChain
@@ -33,7 +33,7 @@ func New() (*Engine, error) {
 // Run the telegram and listen to messages send to the telegram
 func (e *Engine) Run() error {
 	in := make(chan Context, 2014)
-	for _, b := range e.broker {
+	for _, b := range e.brokers {
 		b.Run(in)
 	}
 	return nil
@@ -41,7 +41,7 @@ func (e *Engine) Run() error {
 
 // AddBroker to the engine to communicate with
 func (e *Engine) AddBroker(b Broker) {
-	e.broker = append(e.broker, b)
+	e.brokers = append(e.brokers, b)
 }
 
 // Use adds middlewares to the engine that are run before every handler
