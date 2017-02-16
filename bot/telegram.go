@@ -32,7 +32,7 @@ func (b *TelegramBroker) Name() string {
 }
 
 // Run the TelegramBroker and receive incoming messages via channel
-func (b *TelegramBroker) Run(done chan<- bool, in chan<- Context) {
+func (b *TelegramBroker) Run(done chan<- bool, in chan<- Context) { //TODO: Use in channel
 	messages := make(chan telebot.Message, 100)
 	b.telegram.Listen(messages, time.Second)
 
@@ -82,7 +82,7 @@ func (c *TelegramContext) Raw() string {
 }
 
 // User returns the user of the incoming message
-func (c *TelegramContext) User() telebot.User {
+func (c *TelegramContext) User() telebot.User { // TODO: User
 	return c.message.Sender
 }
 
