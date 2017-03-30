@@ -37,10 +37,10 @@
 			"revisionTime": "2016-11-17T07:43:51Z"
 		},
 		{
-			"checksumSHA1": "yZX1JnkLqTWcbc6ogOlAWK7/Xro=",
+			"checksumSHA1": "Y1zpEnbSvlhLozUt6U63CvC3PNw=",
 			"path": "github.com/go-kit/kit/log",
-			"revision": "a59216a7ce3200b6ba0c05ee8b6da44b852833ce",
-			"revisionTime": "2017-02-10T04:40:37Z"
+			"revision": "5d93a23737003ed3ad90359f0aeb25e08dfdf547",
+			"revisionTime": "2017-03-24T23:12:18Z"
 		},
 		{
 			"checksumSHA1": "t7aTpDH0h4BZcGU0KkUr14QQG2w=",
