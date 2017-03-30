@@ -6,7 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-kit/kit/log/levels"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tucnak/telebot"
@@ -59,14 +60,14 @@ func init() {
 
 // Bot runs the alertmanager telegram
 type Bot struct {
-	logger    levels.Levels
+	logger    log.Logger
 	telegram  *telebot.Bot
 	Config    Config
 	UserStore *UserStore
 }
 
 // NewBot creates a Bot with the UserStore and telegram telegram
-func NewBot(logger levels.Levels, c Config) (*Bot, error) {
+func NewBot(logger log.Logger, c Config) (*Bot, error) {
 	users, err := NewUserStore(c.Store)
 	if err != nil {
 		return nil, err
@@ -89,7 +90,7 @@ func NewBot(logger levels.Levels, c Config) (*Bot, error) {
 func (b *Bot) RunWebserver() {
 	messages := make(chan string, 100)
 
-	http.HandleFunc("/", HandleWebhook(messages))
+	http.HandleFunc("/", HandleWebhook(b.logger, messages))
 	http.Handle("/metrics", prometheus.Handler())
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/healthz", handleHealth)
@@ -97,7 +98,7 @@ func (b *Bot) RunWebserver() {
 	go b.sendWebhook(messages)
 
 	err := http.ListenAndServe(b.Config.ListenAddr, nil)
-	b.logger.Crit().Log("err", err)
+	level.Error(b.logger).Log("err", err)
 	os.Exit(1)
 }
 
@@ -122,7 +123,7 @@ func (b *Bot) Run() {
 	for message := range messages {
 		if message.Sender.ID != b.Config.TelegramAdmin {
 			commandsCounter.WithLabelValues("dropped").Inc()
-			b.logger.Info().Log(
+			level.Info(b.logger).Log(
 				"msg", "dropped message from unallowed sender",
 				"sender_id", message.Sender.ID,
 				"sender_username", message.Sender.Username,
@@ -168,7 +169,7 @@ func (b *Bot) Run() {
 func (b *Bot) handleStart(message telebot.Message) {
 	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
 	b.UserStore.Add(message.Sender)
-	b.logger.Info().Log(
+	level.Info(b.logger).Log(
 		"user subscribed",
 		"username", message.Sender.Username,
 		"user_id", message.Sender.ID,
@@ -178,7 +179,7 @@ func (b *Bot) handleStart(message telebot.Message) {
 func (b *Bot) handleStop(message telebot.Message) {
 	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
 	b.UserStore.Remove(message.Sender)
-	b.logger.Info().Log(
+	level.Info(b.logger).Log(
 		"user unsubscribed",
 		"username", message.Sender.Username,
 		"user_id", message.Sender.ID,

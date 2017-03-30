@@ -43,6 +43,12 @@
 			"revisionTime": "2017-02-10T04:40:37Z"
 		},
 		{
+			"checksumSHA1": "t7aTpDH0h4BZcGU0KkUr14QQG2w=",
+			"path": "github.com/go-kit/kit/log/level",
+			"revision": "5d93a23737003ed3ad90359f0aeb25e08dfdf547",
+			"revisionTime": "2017-03-24T23:12:18Z"
+		},
+		{
 			"checksumSHA1": "5eL4yB7jfMsm4DSpx6/HnU9ENIA=",
 			"path": "github.com/go-kit/kit/log/levels",
 			"revision": "a59216a7ce3200b6ba0c05ee8b6da44b852833ce",

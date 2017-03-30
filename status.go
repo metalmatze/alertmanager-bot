@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/go-kit/kit/log/levels"
+	"github.com/go-kit/kit/log"
 )
 
 type statusResponse struct {
@@ -22,7 +22,7 @@ type statusResponse struct {
 	} `json:"data"`
 }
 
-func status(logger levels.Levels, alertmanagerURL string) (statusResponse, error) {
+func status(logger log.Logger, alertmanagerURL string) (statusResponse, error) {
 	var statusResponse statusResponse
 
 	resp, err := httpGetRetry(logger, alertmanagerURL+"/api/v1/status")

@@ -2,16 +2,17 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/common/model"
 )
 
 // HandleWebhook returns a HandlerFunc that sends messages for users via a channel
-func HandleWebhook(messages chan<- string) http.HandlerFunc {
+func HandleWebhook(logger log.Logger, messages chan<- string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -23,12 +24,18 @@ func HandleWebhook(messages chan<- string) http.HandlerFunc {
 		decoder := json.NewDecoder(r.Body)
 		defer func() {
 			if err := r.Body.Close(); err != nil {
-				log.Println(err)
+				level.Warn(logger).Log(
+					"msg", "can't close reponse body",
+					"err", err,
+				)
 			}
 		}()
 
 		if err := decoder.Decode(&webhook); err != nil {
-			log.Printf("failed to decode webhook message: %v\n", err)
+			level.Warn(logger).Log(
+				"msg", "failed to decode webhook message",
+				"err", err,
+			)
 		}
 
 		for _, webAlert := range webhook.Alerts {

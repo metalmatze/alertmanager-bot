@@ -9,7 +9,7 @@ import (
 	arg "github.com/alexflint/go-arg"
 	"github.com/cenkalti/backoff"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/levels"
+	"github.com/go-kit/kit/log/level"
 	"github.com/joho/godotenv"
 )
 
@@ -19,7 +19,7 @@ var (
 	// Commit is the git commit the binary was built from
 	Commit string
 	// StartTime is the time the program was started
-	StartTime time.Time
+	StartTime = time.Now()
 )
 
 // Config knows all configurations from ENV
@@ -32,19 +32,21 @@ type Config struct {
 }
 
 func main() {
-	StartTime = time.Now()
-
-	logWriter := log.NewSyncWriter(os.Stderr)
-	logger := levels.New(log.NewLogfmtLogger(logWriter))
+	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	logger = level.NewFilter(logger, level.AllowAll())
+	logger = log.With(logger,
+		"ts", log.DefaultTimestampUTC,
+		"caller", log.DefaultCaller,
+	)
 
 	if err := godotenv.Load(); err != nil {
-		logger.Info().Log(
+		level.Info(logger).Log(
 			"msg", "can't load .env",
 			"err", err,
 		)
 	}
 
-	logger.Debug().Log(
+	level.Debug(logger).Log(
 		"msg", "starting alertmanager-bot",
 		"buildtime", BuildTime,
 		"commit", Commit,
@@ -57,7 +59,7 @@ func main() {
 
 	bot, err := NewBot(logger, config)
 	if err != nil {
-		logger.Debug().Log("err", err)
+		level.Debug(logger).Log("err", err)
 	}
 
 	go bot.RunWebserver()
@@ -73,7 +75,7 @@ func httpGetBackoff() *backoff.ExponentialBackOff {
 	return b
 }
 
-func httpGetRetry(logger levels.Levels, url string) (*http.Response, error) {
+func httpGetRetry(logger log.Logger, url string) (*http.Response, error) {
 	var resp *http.Response
 	var err error
 
@@ -91,7 +93,7 @@ func httpGetRetry(logger levels.Levels, url string) (*http.Response, error) {
 	}
 
 	notify := func(err error, dur time.Duration) {
-		logger.Info().Log(
+		level.Info(logger).Log(
 			"msg", "retrying",
 			"duration", dur,
 			"err", err,
