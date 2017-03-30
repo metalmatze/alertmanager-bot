@@ -1,10 +1,11 @@
 EXECUTABLE ?= alertmanager-telegram
 IMAGE ?= metalmatze/$(EXECUTABLE)
 GO := CGO_ENABLED=0 go
+DATE := $(shell date -u '+%FT%T%z')
 
-LDFLAGS += -X main.BuildTime=$(shell date +%FT%T%z)
-LDFLAGS += -X "main.Version=$(VERSION)"
-LDFLAGS += -X main.Commit=$(shell git rev-parse --short=8 HEAD)
+LDFLAGS += -X main.Version=$(DRONE_TAG)
+LDFLAGS += -X main.Revision=$(DRONE_COMMIT)
+LDFLAGS += -X "main.BuildDate=$(DATE)"
 LDFLAGS += -extldflags '-static'
 
 PACKAGES = $(shell go list ./... | grep -v /vendor/)
@@ -15,6 +16,7 @@ all: build
 .PHONY: clean
 clean:
 	$(GO) clean -i ./...
+	rm -rf dist/
 
 .PHONY: fmt
 fmt:
@@ -44,3 +46,10 @@ build: $(EXECUTABLE)
 .PHONY: install
 install:
 	$(GO) install -v -ldflags '-w $(LDFLAGS)'
+
+.PHONY: release
+release:
+	@which gox > /dev/null; if [ $$? -ne 0 ]; then \
+		$(GO) get -u github.com/mitchellh/gox; \
+	fi
+	CGO_ENABLED=0 gox -verbose -ldflags '-w $(LDFLAGS)' -output="dist/$(EXECUTABLE)-${DRONE_TAG}-{{.OS}}-{{.Arch}}"

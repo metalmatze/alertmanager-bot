@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 
 	arg "github.com/alexflint/go-arg"
@@ -14,11 +15,15 @@ import (
 )
 
 var (
-	// BuildTime is the time the binary was built
-	BuildTime string
-	// Commit is the git commit the binary was built from
-	Commit string
-	// StartTime is the time the program was started
+	// Version of alertmanager-bot.
+	Version string
+	// Revision or Commit this binary was built from.
+	Revision string
+	// BuildDate this binary was built.
+	BuildDate string
+	// GoVersion running this binary.
+	GoVersion = runtime.Version()
+	// StartTime has the time this was started.
 	StartTime = time.Now()
 )
 
@@ -46,10 +51,12 @@ func main() {
 		)
 	}
 
-	level.Debug(logger).Log(
-		"msg", "starting alertmanager-bot",
-		"buildtime", BuildTime,
-		"commit", Commit,
+	level.Info(logger).Log(
+		"msg", "starting digitalocean_exporter",
+		"version", Version,
+		"revision", Revision,
+		"buildDate", BuildDate,
+		"goVersion", GoVersion,
 	)
 
 	config := Config{

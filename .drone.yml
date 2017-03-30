@@ -5,6 +5,7 @@ workspace:
 pipeline:
   build:
     image: golang:alpine
+    pull: true
     commands:
       - apk add -U git make
       - make fmt
@@ -12,11 +13,26 @@ pipeline:
       - make lint
       - make test
       - make build
+    when:
+      event: [ push, tag, pull_request ]
+
+  release:
+    image: golang:alpine
+    commands:
+      - apk add -U git make
+      - make release
+    when:
+      event: tag
 
   docker:
     image: plugins/docker
     repo: metalmatze/alertmanager-bot
-    tags: ['latest']
+    tags: [ '${DRONE_TAG}' ]
     when:
-      event: [ push ]
-      branch: [ master ]
+      event: tag
+
+  github:
+    image: plugins/github-release
+    files: dist/*
+    when:
+      event: tag

@@ -214,7 +214,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 			"*AlertManager*\nVersion: %s\nUptime: %s\n*AlertManager Bot*\nVersion: %s\nUptime: %s",
 			s.Data.VersionInfo.Version,
 			uptime,
-			Commit,
+			Revision,
 			uptimeBot,
 		),
 		&telebot.SendOptions{ParseMode: telebot.ModeMarkdown},
