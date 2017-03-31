@@ -91,7 +91,7 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 
 ### Docker
 
-`docker pull metalmatze/alertmanager-bot`
+`docker pull metalmatze/alertmanager-bot:0.1`
 
 Start as a command:
 
@@ -103,14 +103,14 @@ docker run -d \
 	-e 'STORE=/data/users.yml' \
 	-v '/srv/monitoring/alertmanager-bot:/data'
 	--name alertmanager-bot \
-	alertmanager-bot
+	alertmanager-bot:0.1
 ```
 
 Usage within docker-compose:
 
 ```yml
 alertmanager-bot:
-  image: metalmatze/alertmanager-bot
+  image: metalmatze/alertmanager-bot:0.1
   environment:
     TELEGRAM_TOKEN: XXX
     TELEGRAM_ADMIN: '1234567'
