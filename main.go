@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -52,7 +53,7 @@ func main() {
 	}
 
 	level.Info(logger).Log(
-		"msg", "starting digitalocean_exporter",
+		"msg", "starting alertmanager-bot",
 		"version", Version,
 		"revision", Revision,
 		"buildDate", BuildDate,
@@ -87,7 +88,16 @@ func httpGetRetry(logger log.Logger, url string) (*http.Response, error) {
 	var err error
 
 	get := func() error {
-		resp, err = http.Get(url)
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return err
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		req = req.WithContext(ctx)
+
+		resp, err = http.DefaultClient.Do(req)
 		if err != nil {
 			return err
 		}
