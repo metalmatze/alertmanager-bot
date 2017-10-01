@@ -115,6 +115,7 @@ func (b *Bot) sendWebhook(messages <-chan string) {
 	}
 }
 
+// SendAdminMessage to the admin's ID with a message
 func (b *Bot) SendAdminMessage(adminID int, message string) {
 	b.telegram.SendMessage(telebot.User{ID: adminID}, message, nil)
 }
