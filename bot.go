@@ -115,6 +115,10 @@ func (b *Bot) sendWebhook(messages <-chan string) {
 	}
 }
 
+func (b *Bot) SendAdminMessage(adminID int, message string) {
+	b.telegram.SendMessage(telebot.User{ID: adminID}, message, nil)
+}
+
 // Run the telegram and listen to messages send to the telegram
 func (b *Bot) Run() {
 	messages := make(chan telebot.Message, 100)

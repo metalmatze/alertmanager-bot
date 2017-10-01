@@ -72,6 +72,11 @@ func main() {
 
 	go bot.RunWebserver()
 
+	go bot.SendAdminMessage(
+		config.TelegramAdmin,
+		"alertmanager-bot just started. Please /start again to subscribe.",
+	)
+
 	bot.Run()
 }
 
