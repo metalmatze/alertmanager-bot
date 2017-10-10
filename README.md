@@ -149,6 +149,13 @@ receivers:
 
 ## Development
 
+Get all dependencies. We use [golang/dep](https://github.com/golang/dep).  
+Fetch all dependencies with:
+
+```
+dep ensure -v -vendor-only
+```
+
 Build the binary using `make`:
 
 ```

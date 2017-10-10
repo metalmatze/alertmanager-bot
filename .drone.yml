@@ -3,6 +3,11 @@ workspace:
   path: src/github.com/metalmatze/alertmanager-bot
 
 pipeline:
+  dep:
+    image: metalmatze/dep:1.9
+    commands:
+      - dep ensure -v -vendor-only
+
   build:
     image: golang:alpine
     pull: true
