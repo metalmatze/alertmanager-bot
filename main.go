@@ -57,6 +57,18 @@ func main() {
 	}
 	arg.MustParse(&config)
 
+	users, err := NewUserStore(config.Store)
+	if err != nil {
+		level.Error(logger).Log("msg", "failed to create user store", "err", err)
+		os.Exit(1)
+	}
+
+	bot, err := NewBot(logger, config, users)
+	if err != nil {
+		level.Error(logger).Log("msg", "failed to create bot", "err", err)
+		os.Exit(2)
+	}
+
 	level.Info(logger).Log(
 		"msg", "starting alertmanager-bot",
 		"version", Version,
@@ -64,11 +76,6 @@ func main() {
 		"buildDate", BuildDate,
 		"goVersion", GoVersion,
 	)
-
-	bot, err := NewBot(logger, config)
-	if err != nil {
-		level.Debug(logger).Log("err", err)
-	}
 
 	go bot.RunWebserver()
 

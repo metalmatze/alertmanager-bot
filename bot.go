@@ -59,21 +59,23 @@ func init() {
 	prometheus.MustRegister(commandsCounter, webhooksCounter)
 }
 
+type BotUserStore interface {
+	List() []telebot.User
+	Len() int
+	Add(telebot.User) error
+	Remove(telebot.User) error
+}
+
 // Bot runs the alertmanager telegram
 type Bot struct {
 	logger    log.Logger
 	telegram  *telebot.Bot
-	Config    Config
-	UserStore *UserStore
+	userStore BotUserStore
+	config    Config
 }
 
 // NewBot creates a Bot with the UserStore and telegram telegram
-func NewBot(logger log.Logger, c Config) (*Bot, error) {
-	users, err := NewUserStore(c.Store)
-	if err != nil {
-		return nil, err
-	}
-
+func NewBot(logger log.Logger, c Config, s BotUserStore) (*Bot, error) {
 	bot, err := telebot.NewBot(c.TelegramToken)
 	if err != nil {
 		return nil, err
@@ -82,8 +84,8 @@ func NewBot(logger log.Logger, c Config) (*Bot, error) {
 	return &Bot{
 		logger:    logger,
 		telegram:  bot,
-		Config:    c,
-		UserStore: users,
+		config:    c,
+		userStore: s,
 	}, nil
 }
 
@@ -98,7 +100,7 @@ func (b *Bot) RunWebserver() {
 
 	go b.sendWebhook(messages)
 
-	err := http.ListenAndServe(b.Config.ListenAddr, nil)
+	err := http.ListenAndServe(b.config.ListenAddr, nil)
 	level.Error(b.logger).Log("err", err)
 	os.Exit(1)
 }
@@ -110,7 +112,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 // sendWebhook sends messages received via webhook to all subscribed users
 func (b *Bot) sendWebhook(messages <-chan string) {
 	for m := range messages {
-		for _, user := range b.UserStore.List() {
+		for _, user := range b.userStore.List() {
 			b.telegram.SendMessage(user, m, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 		}
 	}
@@ -127,7 +129,7 @@ func (b *Bot) Run() {
 	b.telegram.Listen(messages, time.Second)
 
 	for message := range messages {
-		if message.Sender.ID != b.Config.TelegramAdmin {
+		if message.Sender.ID != b.config.TelegramAdmin {
 			commandsCounter.WithLabelValues("dropped").Inc()
 			level.Info(b.logger).Log(
 				"msg", "dropped message from unallowed sender",
@@ -174,7 +176,7 @@ func (b *Bot) Run() {
 
 func (b *Bot) handleStart(message telebot.Message) {
 	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
-	b.UserStore.Add(message.Sender)
+	b.userStore.Add(message.Sender)
 	level.Info(b.logger).Log(
 		"user subscribed",
 		"username", message.Sender.Username,
@@ -184,7 +186,7 @@ func (b *Bot) handleStart(message telebot.Message) {
 
 func (b *Bot) handleStop(message telebot.Message) {
 	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
-	b.UserStore.Remove(message.Sender)
+	b.userStore.Remove(message.Sender)
 	level.Info(b.logger).Log(
 		"user unsubscribed",
 		"username", message.Sender.Username,
@@ -199,13 +201,13 @@ func (b *Bot) handleHelp(message telebot.Message) {
 func (b *Bot) handleUsers(message telebot.Message) {
 	b.telegram.SendMessage(message.Chat, fmt.Sprintf(
 		"Currently %d users are subscribed.",
-		b.UserStore.Len()),
+		b.userStore.Len()),
 		nil,
 	)
 }
 
 func (b *Bot) handleStatus(message telebot.Message) {
-	s, err := status(b.logger, b.Config.AlertmanagerURL)
+	s, err := status(b.logger, b.config.AlertmanagerURL)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
 		return
@@ -228,7 +230,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 }
 
 func (b *Bot) handleAlerts(message telebot.Message) {
-	alerts, err := listAlerts(b.logger, b.Config.AlertmanagerURL)
+	alerts, err := listAlerts(b.logger, b.config.AlertmanagerURL)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
 		return
@@ -248,7 +250,7 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 }
 
 func (b *Bot) handleSilences(message telebot.Message) {
-	silences, err := listSilences(b.logger, b.Config.AlertmanagerURL)
+	silences, err := listSilences(b.logger, b.config.AlertmanagerURL)
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
 		return
