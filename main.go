@@ -52,6 +52,11 @@ func main() {
 		)
 	}
 
+	config := Config{
+		ListenAddr: ":8080",
+	}
+	arg.MustParse(&config)
+
 	level.Info(logger).Log(
 		"msg", "starting alertmanager-bot",
 		"version", Version,
@@ -59,11 +64,6 @@ func main() {
 		"buildDate", BuildDate,
 		"goVersion", GoVersion,
 	)
-
-	config := Config{
-		ListenAddr: ":8080",
-	}
-	arg.MustParse(&config)
 
 	bot, err := NewBot(logger, config)
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tucnak/telebot"
 )
 
@@ -91,7 +92,7 @@ func (b *Bot) RunWebserver() {
 	messages := make(chan string, 100)
 
 	http.HandleFunc("/", HandleWebhook(b.logger, messages))
-	http.Handle("/metrics", prometheus.Handler())
+	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/healthz", handleHealth)
 
