@@ -10,6 +10,8 @@ import (
 
 	arg "github.com/alexflint/go-arg"
 	"github.com/cenkalti/backoff"
+	"github.com/docker/libkv/store"
+	"github.com/docker/libkv/store/boltdb"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/joho/godotenv"
@@ -56,10 +58,20 @@ func main() {
 	}
 	arg.MustParse(&config)
 
-	users, err := NewUserStore(config.Store)
-	if err != nil {
-		level.Error(logger).Log("msg", "failed to create user store", "err", err)
-		os.Exit(1)
+	var users *UserStore
+	{
+		kvStore, err := boltdb.New([]string{config.Store}, &store.Config{Bucket: "alertmanager"})
+		if err != nil {
+			level.Error(logger).Log("msg", "failed to create store backend", "err", err)
+			os.Exit(1)
+		}
+		defer kvStore.Close()
+
+		users, err = NewUserStore(kvStore)
+		if err != nil {
+			level.Error(logger).Log("msg", "failed to create user store", "err", err)
+			os.Exit(1)
+		}
 	}
 
 	bot, err := NewBot(logger, config, users)

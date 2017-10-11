@@ -56,6 +56,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/docker/libkv"
+  packages = [".","store"]
+  revision = "aabc039ad04deb721e234f99cd1b4aa28ac71a40"
+  version = "v0.2.1"
+
+[[projects]]
   name = "github.com/go-kit/kit"
   packages = ["log","log/level"]
   revision = "4dc7be5d2d12881735283bcab7352178e190fc71"
@@ -135,7 +141,7 @@
 
 [[projects]]
   name = "github.com/prometheus/client_golang"
-  packages = ["prometheus"]
+  packages = ["prometheus","prometheus/promhttp"]
   revision = "c5b7fccd204277076155f10851dad72b76a49317"
   version = "v0.8.0"
 
@@ -220,6 +226,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d2d0b384b1a1cd443f569120a08e065bf1c322bb1773b9f41ce21f8c2c86ea21"
+  inputs-digest = "4a3001e9e7833183331b7c56c99a35d0ff4fa60492c7f213826226e0979519e8"
   solver-name = "gps-cdcl"
   solver-version = 1

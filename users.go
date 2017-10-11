@@ -1,98 +1,67 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
-	"os"
-	"sync"
+	"encoding/json"
+	"fmt"
 
+	"github.com/docker/libkv/store"
 	"github.com/tucnak/telebot"
-	yaml "gopkg.in/yaml.v2"
 )
 
-const fileMode = 0600
+const telegramUsersDirectory = "telegram/users"
 
-// UserStore writes the users to a file for persistence
+// UserStore writes the users to a libkv store backend
 type UserStore struct {
-	mu    sync.Mutex
-	file  string
-	users map[int]telebot.User
+	kv store.Store
 }
 
 // NewUserStore from a filename and loading the contents if there is
-func NewUserStore(file string) (*UserStore, error) {
-	store := &UserStore{
-		file:  file,
-		users: make(map[int]telebot.User),
-	}
-
-	// If file for storing not present create it
-	_, err := os.Stat(store.file)
-	if err != nil {
-		_, err := os.Create(store.file)
-		if err != nil {
-			return nil, err
-		}
-		log.Printf("created %s", store.file)
-	}
-
-	usersBytes, err := ioutil.ReadFile(store.file)
-	if err != nil {
-		return store, err
-	}
-
-	store.mu.Lock()
-	if err := yaml.Unmarshal(usersBytes, &store.users); err != nil {
-		return store, err
-	}
-	store.mu.Unlock()
-
-	return store, nil
+func NewUserStore(kv store.Store) (*UserStore, error) {
+	return &UserStore{kv: kv}, nil
 }
 
 // Len returns the users count
 func (s *UserStore) Len() int {
-	return len(s.users)
+	list, err := s.kv.List(telegramUsersDirectory)
+	if err != nil {
+		return -1
+	}
+	return len(list)
 }
 
 // List all users as slice to range over
 func (s *UserStore) List() []telebot.User {
+	kvPairs, err := s.kv.List(telegramUsersDirectory)
+	if err != nil {
+		return nil
+	}
+
 	var users []telebot.User
-	for _, u := range s.users {
+	for _, kv := range kvPairs {
+		var u telebot.User
+		if err := json.Unmarshal(kv.Value, &u); err != nil {
+			break
+		}
 		users = append(users, u)
 	}
+
 	return users
 }
 
-// Add a telebot User to the store and write the current users to disk
+// Add a telebot User to the store
 func (s *UserStore) Add(u telebot.User) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.users[u.ID] = u
-
-	out, err := yaml.Marshal(s.users)
+	b, err := json.Marshal(u)
 	if err != nil {
 		return err
 	}
-	ioutil.WriteFile(s.file, out, fileMode)
 
-	return nil
+	key := fmt.Sprintf("%s/%d", telegramUsersDirectory, u.ID)
+
+	return s.kv.Put(key, b, nil)
 }
 
-// Remove a telebot User from the store and write the current users to disk
+// Remove a telebot User from the store
 func (s *UserStore) Remove(u telebot.User) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	delete(s.users, u.ID)
-
-	out, err := yaml.Marshal(s.users)
-	if err != nil {
-		return err
-	}
-
-	ioutil.WriteFile(s.file, out, fileMode)
-
-	return nil
+	key := fmt.Sprintf("%s/%d", telegramUsersDirectory, u.ID)
+	return s.kv.Delete(key)
 }
