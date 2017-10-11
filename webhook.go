@@ -8,11 +8,12 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/types"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
 )
 
 // HandleWebhook returns a HandlerFunc that sends messages for users via a channel
-func HandleWebhook(logger log.Logger, messages chan<- string) http.HandlerFunc {
+func HandleWebhook(logger log.Logger, counter prometheus.Counter, messages chan<- string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -25,7 +26,7 @@ func HandleWebhook(logger log.Logger, messages chan<- string) http.HandlerFunc {
 		defer func() {
 			if err := r.Body.Close(); err != nil {
 				level.Warn(logger).Log(
-					"msg", "can't close reponse body",
+					"msg", "can't close response body",
 					"err", err,
 				)
 			}
@@ -65,7 +66,7 @@ func HandleWebhook(logger log.Logger, messages chan<- string) http.HandlerFunc {
 			messages <- out
 		}
 
-		webhooksCounter.Inc()
+		counter.Inc()
 
 		w.WriteHeader(http.StatusOK)
 	}

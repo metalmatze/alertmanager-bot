@@ -45,15 +45,14 @@ func main() {
 		"caller", log.DefaultCaller,
 	)
 
+	// Create the config with default values
+	config := Config{ListenAddr: ":8080"}
+
 	if err := godotenv.Load(); err != nil {
 		level.Info(logger).Log(
 			"msg", "can't load .env",
 			"err", err,
 		)
-	}
-
-	config := Config{
-		ListenAddr: ":8080",
 	}
 	arg.MustParse(&config)
 

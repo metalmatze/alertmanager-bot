@@ -42,23 +42,6 @@ Available commands:
 `
 )
 
-var (
-	commandsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "alertmanagerbot",
-		Name:      "commands_total",
-		Help:      "Number of commands received by command name",
-	}, []string{"command"})
-	webhooksCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "alertmanagerbot",
-		Name:      "webhooks_total",
-		Help:      "Number of webhooks received by this bot",
-	})
-)
-
-func init() {
-	prometheus.MustRegister(commandsCounter, webhooksCounter)
-}
-
 // BotUserStore is all the Bot needs to store and read
 type BotUserStore interface {
 	List() []telebot.User
@@ -69,10 +52,12 @@ type BotUserStore interface {
 
 // Bot runs the alertmanager telegram
 type Bot struct {
-	logger    log.Logger
-	telegram  *telebot.Bot
-	userStore BotUserStore
-	config    Config
+	logger          log.Logger
+	telegram        *telebot.Bot
+	userStore       BotUserStore
+	config          Config
+	commandsCounter *prometheus.CounterVec
+	webhooksCounter prometheus.Counter
 }
 
 // NewBot creates a Bot with the UserStore and telegram telegram
@@ -82,11 +67,25 @@ func NewBot(logger log.Logger, c Config, s BotUserStore) (*Bot, error) {
 		return nil, err
 	}
 
+	commandsCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "alertmanagerbot",
+		Name:      "commands_total",
+		Help:      "Number of commands received by command name",
+	}, []string{"command"})
+	webhooksCounter := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "alertmanagerbot",
+		Name:      "webhooks_total",
+		Help:      "Number of webhooks received by this bot",
+	})
+	prometheus.MustRegister(commandsCounter, webhooksCounter)
+
 	return &Bot{
-		logger:    logger,
-		telegram:  bot,
-		config:    c,
-		userStore: s,
+		logger:          logger,
+		telegram:        bot,
+		config:          c,
+		userStore:       s,
+		commandsCounter: commandsCounter,
+		webhooksCounter: webhooksCounter,
 	}, nil
 }
 
@@ -94,7 +93,7 @@ func NewBot(logger log.Logger, c Config, s BotUserStore) (*Bot, error) {
 func (b *Bot) RunWebserver() {
 	messages := make(chan string, 100)
 
-	http.HandleFunc("/", HandleWebhook(b.logger, messages))
+	http.HandleFunc("/", HandleWebhook(b.logger, b.webhooksCounter, messages))
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/healthz", handleHealth)
@@ -131,7 +130,7 @@ func (b *Bot) Run() {
 
 	for message := range messages {
 		if message.Sender.ID != b.config.TelegramAdmin {
-			commandsCounter.WithLabelValues("dropped").Inc()
+			b.commandsCounter.WithLabelValues("dropped").Inc()
 			level.Info(b.logger).Log(
 				"msg", "dropped message from unallowed sender",
 				"sender_id", message.Sender.ID,
@@ -144,28 +143,28 @@ func (b *Bot) Run() {
 
 		switch message.Text {
 		case commandStart:
-			commandsCounter.WithLabelValues(commandStart).Inc()
+			b.commandsCounter.WithLabelValues(commandStart).Inc()
 			b.handleStart(message)
 		case commandStop:
-			commandsCounter.WithLabelValues(commandStop).Inc()
+			b.commandsCounter.WithLabelValues(commandStop).Inc()
 			b.handleStop(message)
 		case commandHelp:
-			commandsCounter.WithLabelValues(commandHelp).Inc()
+			b.commandsCounter.WithLabelValues(commandHelp).Inc()
 			b.handleHelp(message)
 		case commandUsers:
-			commandsCounter.WithLabelValues(commandUsers).Inc()
+			b.commandsCounter.WithLabelValues(commandUsers).Inc()
 			b.handleUsers(message)
 		case commandStatus:
-			commandsCounter.WithLabelValues(commandStatus).Inc()
+			b.commandsCounter.WithLabelValues(commandStatus).Inc()
 			b.handleStatus(message)
 		case commandAlerts:
-			commandsCounter.WithLabelValues(commandAlerts).Inc()
+			b.commandsCounter.WithLabelValues(commandAlerts).Inc()
 			b.handleAlerts(message)
 		case commandSilences:
-			commandsCounter.WithLabelValues(commandSilences).Inc()
+			b.commandsCounter.WithLabelValues(commandSilences).Inc()
 			b.handleSilences(message)
 		default:
-			commandsCounter.WithLabelValues("incomprehensible").Inc()
+			b.commandsCounter.WithLabelValues("incomprehensible").Inc()
 			b.telegram.SendMessage(
 				message.Chat,
 				"Sorry, I don't understand...",
