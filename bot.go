@@ -125,6 +125,20 @@ func (b *Bot) SendAdminMessage(adminID int, message string) {
 
 // Run the telegram and listen to messages send to the telegram
 func (b *Bot) Run() {
+	commands := map[string]func(message telebot.Message){
+		commandStart:    b.handleStart,
+		commandStop:     b.handleStop,
+		commandHelp:     b.handleHelp,
+		commandUsers:    b.handleUsers,
+		commandStatus:   b.handleStatus,
+		commandAlerts:   b.handleAlerts,
+		commandSilences: b.handleSilences,
+	}
+
+	for command := range commands {
+		b.commandsCounter.WithLabelValues(command).Add(0)
+	}
+
 	messages := make(chan telebot.Message, 100)
 	b.telegram.Listen(messages, time.Second)
 
@@ -132,7 +146,7 @@ func (b *Bot) Run() {
 		if message.Sender.ID != b.config.TelegramAdmin {
 			b.commandsCounter.WithLabelValues("dropped").Inc()
 			level.Info(b.logger).Log(
-				"msg", "dropped message from unallowed sender",
+				"msg", "dropped message from forbidden sender",
 				"sender_id", message.Sender.ID,
 				"sender_username", message.Sender.Username,
 			)
@@ -141,29 +155,11 @@ func (b *Bot) Run() {
 
 		b.telegram.SendChatAction(message.Chat, telebot.Typing)
 
-		switch message.Text {
-		case commandStart:
-			b.commandsCounter.WithLabelValues(commandStart).Inc()
-			b.handleStart(message)
-		case commandStop:
-			b.commandsCounter.WithLabelValues(commandStop).Inc()
-			b.handleStop(message)
-		case commandHelp:
-			b.commandsCounter.WithLabelValues(commandHelp).Inc()
-			b.handleHelp(message)
-		case commandUsers:
-			b.commandsCounter.WithLabelValues(commandUsers).Inc()
-			b.handleUsers(message)
-		case commandStatus:
-			b.commandsCounter.WithLabelValues(commandStatus).Inc()
-			b.handleStatus(message)
-		case commandAlerts:
-			b.commandsCounter.WithLabelValues(commandAlerts).Inc()
-			b.handleAlerts(message)
-		case commandSilences:
-			b.commandsCounter.WithLabelValues(commandSilences).Inc()
-			b.handleSilences(message)
-		default:
+		// Get the corresponding handler from the map by the commands text
+		if handler, ok := commands[message.Text]; ok {
+			b.commandsCounter.WithLabelValues(message.Text).Inc()
+			handler(message)
+		} else {
 			b.commandsCounter.WithLabelValues("incomprehensible").Inc()
 			b.telegram.SendMessage(
 				message.Chat,
