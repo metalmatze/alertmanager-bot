@@ -59,6 +59,7 @@ func init() {
 	prometheus.MustRegister(commandsCounter, webhooksCounter)
 }
 
+// BotUserStore is all the Bot needs to store and read
 type BotUserStore interface {
 	List() []telebot.User
 	Len() int
