@@ -42,26 +42,25 @@ Available commands:
 `
 )
 
-// BotUserStore is all the Bot needs to store and read
-type BotUserStore interface {
-	List() []telebot.User
-	Len() int
-	Add(telebot.User) error
-	Remove(telebot.User) error
+// BotChatStore is all the Bot needs to store and read
+type BotChatStore interface {
+	List() ([]telebot.Chat, error)
+	Add(telebot.Chat) error
+	Remove(telebot.Chat) error
 }
 
 // Bot runs the alertmanager telegram
 type Bot struct {
 	logger          log.Logger
 	telegram        *telebot.Bot
-	userStore       BotUserStore
+	chats           BotChatStore
 	config          Config
 	commandsCounter *prometheus.CounterVec
 	webhooksCounter prometheus.Counter
 }
 
 // NewBot creates a Bot with the UserStore and telegram telegram
-func NewBot(logger log.Logger, c Config, s BotUserStore) (*Bot, error) {
+func NewBot(logger log.Logger, c Config, s BotChatStore) (*Bot, error) {
 	bot, err := telebot.NewBot(c.TelegramToken)
 	if err != nil {
 		return nil, err
@@ -83,7 +82,7 @@ func NewBot(logger log.Logger, c Config, s BotUserStore) (*Bot, error) {
 		logger:          logger,
 		telegram:        bot,
 		config:          c,
-		userStore:       s,
+		chats:           s,
 		commandsCounter: commandsCounter,
 		webhooksCounter: webhooksCounter,
 	}, nil
@@ -112,8 +111,14 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 // sendWebhook sends messages received via webhook to all subscribed users
 func (b *Bot) sendWebhook(messages <-chan string) {
 	for m := range messages {
-		for _, user := range b.userStore.List() {
-			b.telegram.SendMessage(user, m, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+		chats, err := b.chats.List()
+		if err != nil {
+			level.Error(b.logger).Log("msg", "failed to get chat list from store", "err", err)
+			continue
+		}
+
+		for _, chat := range chats {
+			b.telegram.SendMessage(chat, m, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 		}
 	}
 }
@@ -135,6 +140,7 @@ func (b *Bot) Run() {
 		commandSilences: b.handleSilences,
 	}
 
+	// init counters with 0
 	for command := range commands {
 		b.commandsCounter.WithLabelValues(command).Add(0)
 	}
@@ -152,6 +158,8 @@ func (b *Bot) Run() {
 			)
 			continue
 		}
+
+		level.Debug(b.logger).Log("msg", "message received", "text", message.Text)
 
 		b.telegram.SendChatAction(message.Chat, telebot.Typing)
 
@@ -171,8 +179,13 @@ func (b *Bot) Run() {
 }
 
 func (b *Bot) handleStart(message telebot.Message) {
+	if err := b.chats.Add(message.Chat); err != nil {
+		level.Warn(b.logger).Log("msg", "failed to add chat to chat store", "err", err)
+		b.telegram.SendMessage(message.Sender, "I can't add this chat to the subscribers list, see logs", nil)
+		return
+	}
+
 	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
-	b.userStore.Add(message.Sender)
 	level.Info(b.logger).Log(
 		"user subscribed",
 		"username", message.Sender.Username,
@@ -181,8 +194,13 @@ func (b *Bot) handleStart(message telebot.Message) {
 }
 
 func (b *Bot) handleStop(message telebot.Message) {
+	if err := b.chats.Remove(message.Chat); err != nil {
+		level.Warn(b.logger).Log("msg", "failed to remove chat from chat store", "err", err)
+		b.telegram.SendMessage(message.Sender, "I can't remove this chat from the subscribers list, see logs", nil)
+		return
+	}
+
 	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
-	b.userStore.Remove(message.Sender)
 	level.Info(b.logger).Log(
 		"user unsubscribed",
 		"username", message.Sender.Username,
@@ -195,11 +213,23 @@ func (b *Bot) handleHelp(message telebot.Message) {
 }
 
 func (b *Bot) handleUsers(message telebot.Message) {
-	b.telegram.SendMessage(message.Chat, fmt.Sprintf(
-		"Currently %d users are subscribed.",
-		b.userStore.Len()),
-		nil,
-	)
+	chats, err := b.chats.List()
+	if err != nil {
+		level.Warn(b.logger).Log("msg", "failed to remove chat from chat store", "err", err)
+		b.telegram.SendMessage(message.Sender, "I can't remove this chat from the subscribers list, see logs", nil)
+		return
+	}
+
+	list := ""
+	for _, chat := range chats {
+		if chat.IsGroupChat() {
+			list = list + fmt.Sprintf("@%s\n", chat.Title)
+		} else {
+			list = list + fmt.Sprintf("@%s\n", chat.Username)
+		}
+	}
+
+	b.telegram.SendMessage(message.Chat, "Currently these chat have subscribed:\n"+list, nil)
 }
 
 func (b *Bot) handleStatus(message telebot.Message) {

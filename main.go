@@ -58,7 +58,7 @@ func main() {
 	}
 	arg.MustParse(&config)
 
-	var users *UserStore
+	var chats *ChatStore
 	{
 		kvStore, err := boltdb.New([]string{config.Store}, &store.Config{Bucket: "alertmanager"})
 		if err != nil {
@@ -67,14 +67,14 @@ func main() {
 		}
 		defer kvStore.Close()
 
-		users, err = NewUserStore(kvStore)
+		chats, err = NewChatStore(kvStore)
 		if err != nil {
-			level.Error(logger).Log("msg", "failed to create user store", "err", err)
+			level.Error(logger).Log("msg", "failed to create chat store", "err", err)
 			os.Exit(1)
 		}
 	}
 
-	bot, err := NewBot(logger, config, users)
+	bot, err := NewBot(logger, config, chats)
 	if err != nil {
 		level.Error(logger).Log("msg", "failed to create bot", "err", err)
 		os.Exit(2)
