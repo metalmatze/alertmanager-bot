@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -130,6 +131,8 @@ func (b *Bot) SendAdminMessage(adminID int, message string) {
 
 // Run the telegram and listen to messages send to the telegram
 func (b *Bot) Run() {
+	commandSuffix := fmt.Sprintf("@%s", b.telegram.Identity.Username)
+
 	commands := map[string]func(message telebot.Message){
 		commandStart:    b.handleStart,
 		commandStop:     b.handleStop,
@@ -159,13 +162,15 @@ func (b *Bot) Run() {
 			continue
 		}
 
-		level.Debug(b.logger).Log("msg", "message received", "text", message.Text)
-
 		b.telegram.SendChatAction(message.Chat, telebot.Typing)
 
+		// Remove the command suffix from the text, /help@BotName => /help
+		text := strings.Replace(message.Text, commandSuffix, "", -1)
+		level.Debug(b.logger).Log("msg", "message received", "text", text)
+
 		// Get the corresponding handler from the map by the commands text
-		if handler, ok := commands[message.Text]; ok {
-			b.commandsCounter.WithLabelValues(message.Text).Inc()
+		if handler, ok := commands[text]; ok {
+			b.commandsCounter.WithLabelValues(text).Inc()
 			handler(message)
 		} else {
 			b.commandsCounter.WithLabelValues("incomprehensible").Inc()
