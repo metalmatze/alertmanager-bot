@@ -38,6 +38,12 @@
   revision = "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
 
 [[projects]]
+  name = "github.com/boltdb/bolt"
+  packages = ["."]
+  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
+  version = "v1.3.1"
+
+[[projects]]
   name = "github.com/cenkalti/backoff"
   packages = ["."]
   revision = "61153c768f31ee5f130071d08fc82b85208528de"
@@ -57,7 +63,7 @@
 
 [[projects]]
   name = "github.com/docker/libkv"
-  packages = [".","store"]
+  packages = [".","store","store/boltdb"]
   revision = "aabc039ad04deb721e234f99cd1b4aa28ac71a40"
   version = "v0.2.1"
 
@@ -226,6 +232,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4a3001e9e7833183331b7c56c99a35d0ff4fa60492c7f213826226e0979519e8"
+  inputs-digest = "0ceb76855673dad2481806693ef81d23824964b177fca0bb7cb5f32f285a5e70"
   solver-name = "gps-cdcl"
   solver-version = 1
