@@ -169,7 +169,7 @@ func (b *Bot) Run() {
 	b.telegram.Listen(messages, time.Second)
 
 	for message := range messages {
-		if message.UserJoined.ID != 0 || message.UserLeft.ID != 0 {
+		if message.IsService() {
 			continue
 		}
 
