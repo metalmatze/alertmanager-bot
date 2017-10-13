@@ -138,13 +138,10 @@ func main() {
 		"goVersion", GoVersion,
 	)
 
+	// Runs the webserver in a goroutine sending incoming webhooks to Telegram
 	go bot.RunWebserver()
 
-	go bot.SendAdminMessage(
-		config.telegramAdmin,
-		"alertmanager-bot just started. Please /start again to subscribe.",
-	)
-
+	// Runs the bot itself communicating with Telegram
 	bot.Run()
 }
 
