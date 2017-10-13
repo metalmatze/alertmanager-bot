@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
-	arg "github.com/alexflint/go-arg"
 	"github.com/cenkalti/backoff"
 	"github.com/docker/libkv/store"
 	"github.com/docker/libkv/store/boltdb"
@@ -17,6 +17,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/joho/godotenv"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -32,18 +33,62 @@ var (
 	StartTime = time.Now()
 )
 
-// Config knows all configurations from ENV
-type Config struct {
-	AlertmanagerURL string `arg:"env:ALERTMANAGER_URL"`
-	BoltPath        string `arg:"env:BOLT_PATH"`
-	ConsulURL       string `arg:"env:CONSUL_URL"`
-	TelegramToken   string `arg:"env:TELEGRAM_TOKEN"`
-	TelegramAdmin   int    `arg:"env:TELEGRAM_ADMIN"`
-	Store           string `arg:"env:STORE"`
-	ListenAddr      string `arg:"env:LISTEN_ADDR"`
-}
-
 func main() {
+	godotenv.Load()
+
+	config := struct {
+		alertmanager  *url.URL
+		boltPath      string
+		consul        *url.URL
+		listenAddr    string
+		store         string
+		telegramAdmin int
+		telegramToken string
+	}{}
+
+	a := kingpin.New("alertmanager-bot", "Bot for Prometheus' Alertmanager")
+	a.HelpFlag.Short('h')
+
+	a.Flag("alertmanager.url", "The URL that's used to connect to the alertmanager").
+		Required().
+		Envar("ALERTMANAGER_URL").
+		URLVar(&config.alertmanager)
+
+	a.Flag("bolt.path", "The path to the file where bolt persists its data").
+		Envar("BOLT_PATH").
+		StringVar(&config.boltPath)
+
+	a.Flag("consul.url", "The URL that's used to connect to the consul store").
+		Envar("CONSUL_URL").
+		URLVar(&config.consul)
+
+	a.Flag("listen.addr", "The address the alertmanager-bot listens on for incoming webhooks").
+		Required().
+		Envar("LISTEN_ADDR").
+		StringVar(&config.listenAddr)
+
+	a.Flag("store", "The store to use").
+		Required().
+		Envar("STORE").
+		StringVar(&config.store)
+
+	a.Flag("telegram.admin", "The ID of the initial Telegram Admin").
+		Required().
+		Envar("TELEGRAM_ADMIN").
+		IntVar(&config.telegramAdmin)
+
+	a.Flag("telegram.token", "The token used to connect with Telegram").
+		Required().
+		Envar("TELEGRAM_TOKEN").
+		StringVar(&config.telegramToken)
+
+	_, err := a.Parse(os.Args[1:])
+	if err != nil {
+		fmt.Printf("error parsing commandline arguments: %v\n", err)
+		a.Usage(os.Args[1:])
+		os.Exit(2)
+	}
+
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	logger = level.NewFilter(logger, level.AllowAll())
 	logger = log.With(logger,
@@ -51,29 +96,17 @@ func main() {
 		"caller", log.DefaultCaller,
 	)
 
-	// Create the config with default values
-	config := Config{ListenAddr: ":8080"}
-
-	if err := godotenv.Load(); err != nil {
-		level.Info(logger).Log(
-			"msg", "can't load .env",
-			"err", err,
-		)
-	}
-	arg.MustParse(&config)
-
 	var kvStore store.Store
-	var err error
 	{
-		switch strings.ToLower(config.Store) {
+		switch strings.ToLower(config.store) {
 		case "bolt":
-			kvStore, err = boltdb.New([]string{config.BoltPath}, &store.Config{Bucket: "alertmanager"})
+			kvStore, err = boltdb.New([]string{config.boltPath}, &store.Config{Bucket: "alertmanager"})
 			if err != nil {
 				level.Error(logger).Log("msg", "failed to create bolt store backend", "err", err)
 				os.Exit(1)
 			}
 		case "consul":
-			kvStore, err = consul.New([]string{config.ConsulURL}, nil)
+			kvStore, err = consul.New([]string{config.consul.String()}, nil)
 			if err != nil {
 				level.Error(logger).Log("msg", "failed to create consul store backend", "err", err)
 				os.Exit(1)
@@ -91,7 +124,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	bot, err := NewBot(logger, config, chats)
+	bot, err := NewBot(chats, config.listenAddr, config.alertmanager, config.telegramToken, config.telegramAdmin)
 	if err != nil {
 		level.Error(logger).Log("msg", "failed to create bot", "err", err)
 		os.Exit(2)
@@ -108,7 +141,7 @@ func main() {
 	go bot.RunWebserver()
 
 	go bot.SendAdminMessage(
-		config.TelegramAdmin,
+		config.telegramAdmin,
 		"alertmanager-bot just started. Please /start again to subscribe.",
 	)
 

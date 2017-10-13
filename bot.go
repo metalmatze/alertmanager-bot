@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -55,14 +56,16 @@ type Bot struct {
 	logger          log.Logger
 	telegram        *telebot.Bot
 	chats           BotChatStore
-	config          Config
+	addr            string
+	admin           int
+	alertmanager    *url.URL
 	commandsCounter *prometheus.CounterVec
 	webhooksCounter prometheus.Counter
 }
 
 // NewBot creates a Bot with the UserStore and telegram telegram
-func NewBot(logger log.Logger, c Config, s BotChatStore) (*Bot, error) {
-	bot, err := telebot.NewBot(c.TelegramToken)
+func NewBot(chats BotChatStore, addr string, alertmanager *url.URL, telegramToken string, telegramAdmin int) (*Bot, error) {
+	bot, err := telebot.NewBot(telegramToken)
 	if err != nil {
 		return nil, err
 	}
@@ -80,10 +83,12 @@ func NewBot(logger log.Logger, c Config, s BotChatStore) (*Bot, error) {
 	prometheus.MustRegister(commandsCounter, webhooksCounter)
 
 	return &Bot{
-		logger:          logger,
+		logger:          log.NewNopLogger(), // TODO: Pass via Options
 		telegram:        bot,
-		config:          c,
-		chats:           s,
+		chats:           chats,
+		addr:            addr,
+		admin:           telegramAdmin,
+		alertmanager:    alertmanager,
 		commandsCounter: commandsCounter,
 		webhooksCounter: webhooksCounter,
 	}, nil
@@ -100,7 +105,7 @@ func (b *Bot) RunWebserver() {
 
 	go b.sendWebhook(messages)
 
-	err := http.ListenAndServe(b.config.ListenAddr, nil)
+	err := http.ListenAndServe(b.addr, nil)
 	level.Error(b.logger).Log("err", err)
 	os.Exit(1)
 }
@@ -152,7 +157,7 @@ func (b *Bot) Run() {
 	b.telegram.Listen(messages, time.Second)
 
 	for message := range messages {
-		if message.Sender.ID != b.config.TelegramAdmin {
+		if message.Sender.ID != b.admin {
 			b.commandsCounter.WithLabelValues("dropped").Inc()
 			level.Info(b.logger).Log(
 				"msg", "dropped message from forbidden sender",
@@ -238,7 +243,7 @@ func (b *Bot) handleUsers(message telebot.Message) {
 }
 
 func (b *Bot) handleStatus(message telebot.Message) {
-	s, err := status(b.logger, b.config.AlertmanagerURL)
+	s, err := status(b.logger, b.alertmanager.String())
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
 		return
@@ -261,7 +266,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 }
 
 func (b *Bot) handleAlerts(message telebot.Message) {
-	alerts, err := listAlerts(b.logger, b.config.AlertmanagerURL)
+	alerts, err := listAlerts(b.logger, b.alertmanager.String())
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
 		return
@@ -281,7 +286,7 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 }
 
 func (b *Bot) handleSilences(message telebot.Message) {
-	silences, err := listSilences(b.logger, b.config.AlertmanagerURL)
+	silences, err := listSilences(b.logger, b.alertmanager.String())
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
 		return
