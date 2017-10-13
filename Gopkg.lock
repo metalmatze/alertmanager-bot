@@ -51,18 +51,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/alexflint/go-arg"
-  packages = ["."]
-  revision = "59fccacb2679dde66e0b20ed65bd26178fcbf54e"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/alexflint/go-scalar"
-  packages = ["."]
-  revision = "e80c3b7ed292b052c7083b6fd7154a8422c33f65"
-
-[[projects]]
-  branch = "master"
   name = "github.com/armon/circbuf"
   packages = ["."]
   revision = "bbbad097214e2918d8543d5201d12bfd7bca254d"
@@ -388,7 +376,7 @@
   branch = "master"
   name = "github.com/miekg/dns"
   packages = [".","internal/socket"]
-  revision = "9f7460ee9cfe2867a7b42894666ebcef4cba7a5e"
+  revision = "f218fef126d8842f4627102c8a63617f09116e79"
 
 [[projects]]
   branch = "master"
@@ -500,9 +488,15 @@
 
 [[projects]]
   name = "github.com/shirou/gopsutil"
-  packages = ["host","internal/common","process"]
+  packages = ["cpu","host","internal/common","mem","net","process"]
   revision = "6e221c482653ef05c9f6a7bf71ddceea0e40bac5"
   version = "v2.17.09"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/shirou/w32"
+  packages = ["."]
+  revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
@@ -568,7 +562,7 @@
   branch = "master"
   name = "golang.org/x/text"
   packages = ["encoding","encoding/charmap","encoding/internal","encoding/internal/identifier","internal/gen","transform","unicode/cldr"]
-  revision = "825fc78a2fd6fa0a5447e300189e3219e05e1f25"
+  revision = "c01e4764d870b77f8abe5096ee19ad20d80e8075"
 
 [[projects]]
   branch = "master"
@@ -603,6 +597,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d4a4fac27e5a8f62af7f76ee784be887ab8b18c90ba99060cc4a8b6de3bbaab2"
+  inputs-digest = "9748f395df3b08dede792c6562e135371b8d9d0709416750d9a17a10570f6b5c"
   solver-name = "gps-cdcl"
   solver-version = 1
