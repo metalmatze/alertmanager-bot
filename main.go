@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	arg "github.com/alexflint/go-arg"
 	"github.com/cenkalti/backoff"
 	"github.com/docker/libkv/store"
 	"github.com/docker/libkv/store/boltdb"
+	"github.com/docker/libkv/store/consul"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/joho/godotenv"
@@ -33,6 +35,8 @@ var (
 // Config knows all configurations from ENV
 type Config struct {
 	AlertmanagerURL string `arg:"env:ALERTMANAGER_URL"`
+	BoltPath        string `arg:"env:BOLT_PATH"`
+	ConsulURL       string `arg:"env:CONSUL_URL"`
 	TelegramToken   string `arg:"env:TELEGRAM_TOKEN"`
 	TelegramAdmin   int    `arg:"env:TELEGRAM_ADMIN"`
 	Store           string `arg:"env:STORE"`
@@ -58,20 +62,33 @@ func main() {
 	}
 	arg.MustParse(&config)
 
-	var chats *ChatStore
+	var kvStore store.Store
+	var err error
 	{
-		kvStore, err := boltdb.New([]string{config.Store}, &store.Config{Bucket: "alertmanager"})
-		if err != nil {
-			level.Error(logger).Log("msg", "failed to create store backend", "err", err)
+		switch strings.ToLower(config.Store) {
+		case "bolt":
+			kvStore, err = boltdb.New([]string{config.BoltPath}, &store.Config{Bucket: "alertmanager"})
+			if err != nil {
+				level.Error(logger).Log("msg", "failed to create bolt store backend", "err", err)
+				os.Exit(1)
+			}
+		case "consul":
+			kvStore, err = consul.New([]string{config.ConsulURL}, nil)
+			if err != nil {
+				level.Error(logger).Log("msg", "failed to create consul store backend", "err", err)
+				os.Exit(1)
+			}
+		default:
+			level.Error(logger).Log("msg", "please provide one of the following supported store backends: bolt, consul")
 			os.Exit(1)
 		}
-		defer kvStore.Close()
+	}
+	defer kvStore.Close()
 
-		chats, err = NewChatStore(kvStore)
-		if err != nil {
-			level.Error(logger).Log("msg", "failed to create chat store", "err", err)
-			os.Exit(1)
-		}
+	chats, err := NewChatStore(kvStore)
+	if err != nil {
+		level.Error(logger).Log("msg", "failed to create chat store", "err", err)
+		os.Exit(1)
 	}
 
 	bot, err := NewBot(logger, config, chats)
