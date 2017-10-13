@@ -20,7 +20,7 @@ const (
 	commandStart = "/start"
 	commandStop  = "/stop"
 	commandHelp  = "/help"
-	commandUsers = "/users"
+	commandChats = "/chats"
 
 	commandStatus     = "/status"
 	commandAlerts     = "/alerts"
@@ -154,7 +154,7 @@ func (b *Bot) Run() {
 		commandStart:    b.handleStart,
 		commandStop:     b.handleStop,
 		commandHelp:     b.handleHelp,
-		commandUsers:    b.handleUsers,
+		commandChats:    b.handleChats,
 		commandStatus:   b.handleStatus,
 		commandAlerts:   b.handleAlerts,
 		commandSilences: b.handleSilences,
@@ -234,7 +234,7 @@ func (b *Bot) handleHelp(message telebot.Message) {
 	b.telegram.SendMessage(message.Chat, responseHelp, nil)
 }
 
-func (b *Bot) handleUsers(message telebot.Message) {
+func (b *Bot) handleChats(message telebot.Message) {
 	chats, err := b.chats.List()
 	if err != nil {
 		level.Warn(b.logger).Log("msg", "failed to remove chat from chat store", "err", err)
