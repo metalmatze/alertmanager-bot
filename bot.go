@@ -64,7 +64,7 @@ type Bot struct {
 }
 
 // NewBot creates a Bot with the UserStore and telegram telegram
-func NewBot(chats BotChatStore, addr string, alertmanager *url.URL, telegramToken string, telegramAdmin int) (*Bot, error) {
+func NewBot(chats BotChatStore, addr string, alertmanager *url.URL, telegramToken string, telegramAdmin int, opts ...func(b *Bot)) (*Bot, error) {
 	bot, err := telebot.NewBot(telegramToken)
 	if err != nil {
 		return nil, err
@@ -82,8 +82,8 @@ func NewBot(chats BotChatStore, addr string, alertmanager *url.URL, telegramToke
 	})
 	prometheus.MustRegister(commandsCounter, webhooksCounter)
 
-	return &Bot{
-		logger:          log.NewNopLogger(), // TODO: Pass via Options
+	b := &Bot{
+		logger:          log.NewNopLogger(),
 		telegram:        bot,
 		chats:           chats,
 		addr:            addr,
@@ -91,7 +91,19 @@ func NewBot(chats BotChatStore, addr string, alertmanager *url.URL, telegramToke
 		alertmanager:    alertmanager,
 		commandsCounter: commandsCounter,
 		webhooksCounter: webhooksCounter,
-	}, nil
+	}
+
+	for _, opt := range opts {
+		opt(b)
+	}
+
+	return b, nil
+}
+
+func BotLogger(l log.Logger) func(b *Bot) {
+	return func(b *Bot) {
+		b.logger = l
+	}
 }
 
 // RunWebserver starts a http server and listens for messages to send to the users

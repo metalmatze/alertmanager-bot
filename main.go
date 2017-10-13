@@ -124,7 +124,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	bot, err := NewBot(chats, config.listenAddr, config.alertmanager, config.telegramToken, config.telegramAdmin)
+	var opts []func(b *Bot)
+	opts = append(opts, BotLogger(logger))
+
+	bot, err := NewBot(chats, config.listenAddr, config.alertmanager, config.telegramToken, config.telegramAdmin, opts...)
 	if err != nil {
 		level.Error(logger).Log("msg", "failed to create bot", "err", err)
 		os.Exit(2)
