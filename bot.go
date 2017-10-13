@@ -100,6 +100,7 @@ func NewBot(chats BotChatStore, addr string, alertmanager *url.URL, telegramToke
 	return b, nil
 }
 
+// BotLogger sets the logger for the Bot as an option
 func BotLogger(l log.Logger) func(b *Bot) {
 	return func(b *Bot) {
 		b.logger = l
