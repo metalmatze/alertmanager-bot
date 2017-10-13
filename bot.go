@@ -187,6 +187,7 @@ func (b *Bot) Run() {
 
 		// Remove the command suffix from the text, /help@BotName => /help
 		text := strings.Replace(message.Text, commandSuffix, "", -1)
+		text = strings.Split(text, " ")[0]
 		level.Debug(b.logger).Log("msg", "message received", "text", text)
 
 		// Get the corresponding handler from the map by the commands text
