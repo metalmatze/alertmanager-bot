@@ -240,7 +240,7 @@ func (b *Bot) handleStart(message telebot.Message) {
 func (b *Bot) handleStop(message telebot.Message) {
 	if err := b.chats.Remove(message.Chat); err != nil {
 		level.Warn(b.logger).Log("msg", "failed to remove chat from chat store", "err", err)
-		b.telegram.SendMessage(message.Sender, "I can't remove this chat from the subscribers list, see logs", nil)
+		b.telegram.SendMessage(message.Sender, "I can't remove this chat from the subscribers list.", nil)
 		return
 	}
 
@@ -259,8 +259,8 @@ func (b *Bot) handleHelp(message telebot.Message) {
 func (b *Bot) handleChats(message telebot.Message) {
 	chats, err := b.chats.List()
 	if err != nil {
-		level.Warn(b.logger).Log("msg", "failed to remove chat from chat store", "err", err)
-		b.telegram.SendMessage(message.Sender, "I can't remove this chat from the subscribers list, see logs", nil)
+		level.Warn(b.logger).Log("msg", "failed to list chats from chat store", "err", err)
+		b.telegram.SendMessage(message.Sender, "I can't list the subscribed chats.", nil)
 		return
 	}
 
