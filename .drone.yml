@@ -32,7 +32,7 @@ pipeline:
   docker:
     image: plugins/docker
     repo: metalmatze/alertmanager-bot
-    tags: [ '${DRONE_TAG}' ]
+    tag: [ 0.2, 0.2.0 ]
     when:
       event: tag
 

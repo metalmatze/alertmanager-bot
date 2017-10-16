@@ -18,7 +18,7 @@ I want to extend this basic functionality.
 Previously the Alertmanager could only talk to you via a chat, but now you can talk back via [commands](#commands).  
 You can ask about current ongoing [alerts](#alerts) and [silences](#silences).  
 In the future I plan to also support silencing via the chat, so you can silences after getting an alert from within the chat.  
-A lot of other stuff can be added!
+A lot of other things can be added!
 
 ## Messengers
 
@@ -39,15 +39,14 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 ###### /alerts
 
 > 🔥 **FIRING** 🔥  
-> **NodeDown** (Node scraper.krautreporter.rancher.internal:8080 down)  
-> scraper.krautreporter.rancher.internal:8080 has been down for more than 1 minute.  
+> **NodeDown** (Node scraper.krautreporter:8080 down)  
+> scraper.krautreporter:8080 has been down for more than 1 minute.  
 > **Started**: 1 week 2 days 3 hours 50 minutes 42 seconds ago  
 > 
-> 🔥 **FIRING** 🔥  
-> **RancherServiceState** (scraper is inactive)  
-> scraper is inactive for more than 1 minute.  
-> **Started**: 1 week 2 days 3 hours 50 minutes 57 seconds ago  
-
+> 🔥 **FIRING** 🔥
+> **monitored_service_down** (MONITORED SERVICE DOWN)
+> The monitoring service 'digitalocean-exporter' is down.
+> **Started**: 10 seconds ago
 
 ###### /silences
 
@@ -61,9 +60,10 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 > **Started**: 1 week 2 days 3 hours 46 minutes 21 seconds ago  
 > **Ends**: -3 weeks 1 day 13 minutes 24 seconds  
 
-###### /users
+###### /chats
 
-> Currently 1 users are subscribed.
+> Currently these chat have subscribed:
+> @MetalMatze
 
 
 ###### /status
@@ -77,7 +77,7 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 
 ###### /help
 
-> I'm the AlertManager bot for Prometheus. I will notify you about alerts.  
+> I'm a Prometheus AlertManager Bot for Telegram. I will notify you about alerts.  
 > You can also ask me about my [/status](#status), [/alerts](#alerts) & [/silences](#silences)  
 >   
 > Available commands:  
@@ -91,31 +91,48 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 
 ### Docker
 
-`docker pull metalmatze/alertmanager-bot:0.1`
+`docker pull metalmatze/alertmanager-bot:0.2`
 
 Start as a command:
 
+#### Bolt Storage
+
 ```bash
 docker run -d \
-	-e 'TELEGRAM_TOKEN=XXX' \
-	-e 'TELEGRAM_ADMIN=1234567' \
 	-e 'ALERTMANAGER_URL=http://alertmanager:9093' \
-	-e 'STORE=/data/users.yml' \
+	-e 'BOLT_PATH=/data/bot.db' \
+	-e 'STORE=bolt' \
+	-e 'TELEGRAM_ADMIN=1234567' \
+	-e 'TELEGRAM_TOKEN=XXX' \
 	-v '/srv/monitoring/alertmanager-bot:/data'
 	--name alertmanager-bot \
-	alertmanager-bot:0.1
+	alertmanager-bot:0.2
+```
+
+#### Consul Storage
+
+```bash
+docker run -d \
+	-e 'ALERTMANAGER_URL=http://alertmanager:9093' \
+	-e 'CONSUL_URL=localhost:8500' \
+	-e 'STORE=consul' \
+	-e 'TELEGRAM_ADMIN=1234567' \
+	-e 'TELEGRAM_TOKEN=XXX' \
+	--name alertmanager-bot \
+	alertmanager-bot:0.2
 ```
 
 Usage within docker-compose:
 
 ```yml
 alertmanager-bot:
-  image: metalmatze/alertmanager-bot:0.1
+  image: metalmatze/alertmanager-bot:0.2
   environment:
-    TELEGRAM_TOKEN: XXX
-    TELEGRAM_ADMIN: '1234567'
     ALERTMANAGER_URL: http://alertmanager:9093
-    STORE: /data/users.yml
+    BOLT_PATH: /data/bot.db
+    STORE: bolt
+    TELEGRAM_ADMIN: '1234567'
+    TELEGRAM_TOKEN: XXX
   volumes:
   - /srv/monitoring/alertmanager-bot:/data
 ```
@@ -128,10 +145,12 @@ alertmanager-bot:
 ENV Variable | Description
 |-------------------|------------------------------------------------------|
 | ALERTMANAGER_URL  | Address of the alertmanager, default: `http://localhost:9093` |
+| BOLT_PATH         | Path on disk to the file where the boltdb is stored, default: `/tmp/bot.db` |
+| CONSUL_URL        | The URL to use to connect with Consul, default: `localhost:8500` |
 | LISTEN_ADDR       | Address that the bot listens for webhooks, default: `0.0.0.0:8080` |
-| TELEGRAM_TOKEN    | Token you get from [@botfather](https://telegram.me/botfather) |
+| STORE             | The type of the store to use, choose from bolt (local) or consul (distributed) |
 | TELEGRAM_ADMIN    | The Telegram user id for the admin |
-| STORE             | The subscribed users are persisted to the file, default: `data.yml` |
+| TELEGRAM_TOKEN    | Token you get from [@botfather](https://telegram.me/botfather) |
 
 #### Alertmanager Configuration 
 
@@ -161,7 +180,12 @@ Build the binary using `make`:
 ```
 make install
 ```
-<!-- TODO: Write more -->
+
+In case you have `$GOPATH/bin` in your `$PATH` you can now simply start the bot by running:
+
+```bash
+alertmanager-bot
+```
 
 ## Missing
 
@@ -174,8 +198,7 @@ make install
 ##### Authentication
 
 Right now only one user can use the bot by giving the bot one telegram user id.  
-Also if the user subscribes the user is marshalled to the store `.yml` file.  
-_Maybe™_ that should be improved for better deployment within orchestration tools.
+Others can just read what the Bot sends to a group chat.
 
 ##### More Messengers
 
@@ -188,7 +211,3 @@ Messengers considered to add in the future:
 * [Matrix](https://matrix.org/)
 
 If one is missing for you just open an issue.
-
-##### Instrumentation
-
-This bot itself should export metrics at runtime about the current status.
