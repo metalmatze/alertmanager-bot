@@ -32,7 +32,7 @@ const (
 	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
 	responseStop  = "Alright, %s! I won't talk to you again.\n" + commandHelp
 	responseHelp  = `
-I'm a Prometheus AlertManager telegram for Telegram. I will notify you about alerts.
+I'm a Prometheus AlertManager Bot for Telegram. I will notify you about alerts.
 You can also ask me about my ` + commandStatus + `, ` + commandAlerts + ` & ` + commandSilences + `
 
 Available commands:
@@ -53,16 +53,18 @@ type BotChatStore interface {
 
 // Bot runs the alertmanager telegram
 type Bot struct {
-	logger          log.Logger
-	telegram        *telebot.Bot
-	chats           BotChatStore
-	addr            string
-	admin           int
-	alertmanager    *url.URL
+	addr         string
+	admin        int
+	alertmanager *url.URL
+	chats        BotChatStore
+	logger       log.Logger
+	telegram     *telebot.Bot
+
 	commandsCounter *prometheus.CounterVec
 	webhooksCounter prometheus.Counter
 }
 
+// BotOption passed to NewBot to change the default instance
 type BotOption func(b *Bot)
 
 // NewBot creates a Bot with the UserStore and telegram telegram
@@ -77,12 +79,18 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 		Name:      "commands_total",
 		Help:      "Number of commands received by command name",
 	}, []string{"command"})
+	if err := prometheus.Register(commandsCounter); err != nil {
+		return nil, err
+	}
+
 	webhooksCounter := prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace: "alertmanagerbot",
 		Name:      "webhooks_total",
 		Help:      "Number of webhooks received by this bot",
 	})
-	prometheus.MustRegister(commandsCounter, webhooksCounter)
+	if err := prometheus.Register(webhooksCounter); err != nil {
+		return nil, err
+	}
 
 	b := &Bot{
 		logger:          log.NewNopLogger(),
@@ -143,7 +151,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// sendWebhook sends messages received via webhook to all subscribed users
+// sendWebhook sends messages received via webhook to all subscribed chats
 func (b *Bot) sendWebhook(messages <-chan string) {
 	for m := range messages {
 		chats, err := b.chats.List()
@@ -204,7 +212,9 @@ func (b *Bot) Run() {
 
 		// Remove the command suffix from the text, /help@BotName => /help
 		text := strings.Replace(message.Text, commandSuffix, "", -1)
+		// Only take the first part into account, /help foo => /help
 		text = strings.Split(text, " ")[0]
+
 		level.Debug(b.logger).Log("msg", "message received", "text", text)
 
 		// Get the corresponding handler from the map by the commands text
@@ -225,7 +235,7 @@ func (b *Bot) Run() {
 func (b *Bot) handleStart(message telebot.Message) {
 	if err := b.chats.Add(message.Chat); err != nil {
 		level.Warn(b.logger).Log("msg", "failed to add chat to chat store", "err", err)
-		b.telegram.SendMessage(message.Sender, "I can't add this chat to the subscribers list, see logs", nil)
+		b.telegram.SendMessage(message.Sender, "I can't add this chat to the subscribers list.", nil)
 		return
 	}
 
