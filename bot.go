@@ -63,9 +63,11 @@ type Bot struct {
 	webhooksCounter prometheus.Counter
 }
 
+type BotOption func(b *Bot)
+
 // NewBot creates a Bot with the UserStore and telegram telegram
-func NewBot(chats BotChatStore, addr string, alertmanager *url.URL, telegramToken string, telegramAdmin int, opts ...func(b *Bot)) (*Bot, error) {
-	bot, err := telebot.NewBot(telegramToken)
+func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bot, error) {
+	bot, err := telebot.NewBot(token)
 	if err != nil {
 		return nil, err
 	}
@@ -86,9 +88,9 @@ func NewBot(chats BotChatStore, addr string, alertmanager *url.URL, telegramToke
 		logger:          log.NewNopLogger(),
 		telegram:        bot,
 		chats:           chats,
-		addr:            addr,
-		admin:           telegramAdmin,
-		alertmanager:    alertmanager,
+		addr:            "127.0.0.1:8080",
+		admin:           admin,
+		alertmanager:    &url.URL{Host: "localhost:9093"},
 		commandsCounter: commandsCounter,
 		webhooksCounter: webhooksCounter,
 	}
@@ -100,10 +102,24 @@ func NewBot(chats BotChatStore, addr string, alertmanager *url.URL, telegramToke
 	return b, nil
 }
 
-// BotLogger sets the logger for the Bot as an option
-func BotLogger(l log.Logger) func(b *Bot) {
+// BotWithLogger sets the logger for the Bot as an option
+func BotWithLogger(l log.Logger) BotOption {
 	return func(b *Bot) {
 		b.logger = l
+	}
+}
+
+// BotWithAddr sets the internal listening addr of the bot's web server receiving webhooks
+func BotWithAddr(addr string) BotOption {
+	return func(b *Bot) {
+		b.addr = addr
+	}
+}
+
+// BotWithAlertmanager sets the connection url for the Alertmanager
+func BotWithAlertmanager(u *url.URL) BotOption {
+	return func(b *Bot) {
+		b.alertmanager = u
 	}
 }
 
