@@ -39,6 +39,7 @@ pipeline:
 
   github:
     image: plugins/github-release
+    secrets: [ github_token ]
     files: dist/*
     when:
       event: tag
