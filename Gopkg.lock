@@ -188,10 +188,9 @@
   revision = "130e6b02ab059e7b717a096f397c5b60111cae74"
 
 [[projects]]
-  branch = "master"
   name = "github.com/hako/durafmt"
   packages = ["."]
-  revision = "e504b62767bfcd16b1dd577009ef213d134d8aa1"
+  revision = "ea3ab126a6496974aea2b579acbc327514a55b50"
 
 [[projects]]
   name = "github.com/hashicorp/consul"
@@ -488,15 +487,9 @@
 
 [[projects]]
   name = "github.com/shirou/gopsutil"
-  packages = ["cpu","host","internal/common","mem","net","process"]
+  packages = ["host","internal/common","process"]
   revision = "6e221c482653ef05c9f6a7bf71ddceea0e40bac5"
   version = "v2.17.09"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/shirou/w32"
-  packages = ["."]
-  revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
@@ -597,6 +590,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9748f395df3b08dede792c6562e135371b8d9d0709416750d9a17a10570f6b5c"
+  inputs-digest = "e004e7dc23cb82cd01d82b30c6488633e9d3d48e29459962291890bd74967c26"
   solver-name = "gps-cdcl"
   solver-version = 1

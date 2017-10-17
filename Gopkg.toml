@@ -31,8 +31,8 @@ required = ["github.com/boltdb/bolt", "github.com/hashicorp/consul"]
   version = "0.6.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/hako/durafmt"
+  revision = "ea3ab126a6496974aea2b579acbc327514a55b50"
 
 [[constraint]]
   name = "github.com/joho/godotenv"
