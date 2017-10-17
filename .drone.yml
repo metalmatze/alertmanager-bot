@@ -32,6 +32,7 @@ pipeline:
   docker:
     image: plugins/docker
     repo: metalmatze/alertmanager-bot
+    secrets: [ docker_username, docker_password ]
     tag: [ 0.2, 0.2.0 ]
     when:
       event: tag
