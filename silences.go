@@ -12,14 +12,6 @@ import (
 	"github.com/prometheus/alertmanager/types"
 )
 
-// ByStatus implements sort.Interface for []types.Silence based on
-// the EndsAt field.
-type ByStatus []types.Silence
-
-func (s ByStatus) Len() int           { return len(s) }
-func (s ByStatus) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s ByStatus) Less(i, j int) bool { return !s[i].EndsAt.Before(s[j].EndsAt) }
-
 type silencesResponse struct {
 	Data   []types.Silence `json:"data"`
 	Status string          `json:"status"`
@@ -39,7 +31,9 @@ func listSilences(logger log.Logger, alertmanagerURL string) ([]types.Silence, e
 	}
 
 	silences := silencesResponse.Data
-	sort.Sort(ByStatus(silences))
+	sort.Slice(silences, func(i, j int) bool {
+		return silences[i].EndsAt.After(silences[j].EndsAt)
+	})
 
 	return silences, err
 }
