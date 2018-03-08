@@ -150,7 +150,7 @@ func main() {
 	bot.Run()
 }
 
-func httpGetBackoff() *backoff.ExponentialBackOff {
+func httpBackoff() *backoff.ExponentialBackOff {
 	b := backoff.NewExponentialBackOff()
 	b.InitialInterval = 200 * time.Millisecond
 	b.MaxInterval = 2 * time.Second
@@ -158,17 +158,17 @@ func httpGetBackoff() *backoff.ExponentialBackOff {
 	return b
 }
 
-func httpGetRetry(logger log.Logger, url string) (*http.Response, error) {
+func httpRetry(logger log.Logger, url string, method string) (*http.Response, error) {
 	var resp *http.Response
 	var err error
 
-	get := func() error {
-		req, err := http.NewRequest(http.MethodGet, url, nil)
+	fn := func() error {
+		req, err := http.NewRequest(method, url, nil)
 		if err != nil {
 			return err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		req = req.WithContext(ctx)
 
@@ -177,8 +177,15 @@ func httpGetRetry(logger log.Logger, url string) (*http.Response, error) {
 			return err
 		}
 
-		if resp.StatusCode != 200 {
-			return fmt.Errorf("status code is %d not 200", resp.StatusCode)
+		switch method {
+		case http.MethodGet:
+			if resp.StatusCode != 200 {
+				return fmt.Errorf("status code is %d not 200", resp.StatusCode)
+			}
+		case http.MethodPost:
+			if resp.StatusCode == 400 {
+				return fmt.Errorf("status code is %d not 3xx", resp.StatusCode)
+			}
 		}
 
 		return nil
@@ -193,7 +200,7 @@ func httpGetRetry(logger log.Logger, url string) (*http.Response, error) {
 		)
 	}
 
-	if err := backoff.RetryNotify(get, httpGetBackoff(), notify); err != nil {
+	if err := backoff.RetryNotify(fn, httpBackoff(), notify); err != nil {
 		return nil, err
 	}
 

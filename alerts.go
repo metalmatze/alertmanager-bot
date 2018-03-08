@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -18,7 +19,7 @@ type alertResponse struct {
 }
 
 func listAlerts(logger log.Logger, alertmanagerURL string) ([]types.Alert, error) {
-	resp, err := httpGetRetry(logger, alertmanagerURL+"/api/v1/alerts")
+	resp, err := httpRetry(logger, alertmanagerURL+"/api/v1/alerts", http.MethodGet)
 	if err != nil {
 		return nil, err
 	}

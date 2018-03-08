@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -25,7 +26,7 @@ type statusResponse struct {
 func status(logger log.Logger, alertmanagerURL string) (statusResponse, error) {
 	var statusResponse statusResponse
 
-	resp, err := httpGetRetry(logger, alertmanagerURL+"/api/v1/status")
+	resp, err := httpRetry(logger, alertmanagerURL+"/api/v1/status", http.MethodGet)
 	if err != nil {
 		return statusResponse, err
 	}

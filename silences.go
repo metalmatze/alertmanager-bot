@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -18,7 +19,7 @@ type silencesResponse struct {
 }
 
 func listSilences(logger log.Logger, alertmanagerURL string) ([]types.Silence, error) {
-	resp, err := httpGetRetry(logger, alertmanagerURL+"/api/v1/silences")
+	resp, err := httpRetry(logger, alertmanagerURL+"/api/v1/silences", http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
