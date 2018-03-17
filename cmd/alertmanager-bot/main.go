@@ -48,15 +48,15 @@ func main() {
 	godotenv.Load()
 
 	config := struct {
-		alertmanager  *url.URL
-		boltPath      string
-		consul        *url.URL
-		listenAddr    string
-		logLevel      string
-		logJSON       bool
-		store         string
-		telegramAdmin int
-		telegramToken string
+		alertmanager   *url.URL
+		boltPath       string
+		consul         *url.URL
+		listenAddr     string
+		logLevel       string
+		logJSON        bool
+		store          string
+		telegramAdmins []int
+		telegramToken  string
 	}{}
 
 	a := kingpin.New("alertmanager-bot", "Bot for Prometheus' Alertmanager")
@@ -97,7 +97,7 @@ func main() {
 	a.Flag("telegram.admin", "The ID of the initial Telegram Admin").
 		Required().
 		Envar("TELEGRAM_ADMIN").
-		IntVar(&config.telegramAdmin)
+		IntsVar(&config.telegramAdmins)
 
 	a.Flag("telegram.token", "The token used to connect with Telegram").
 		Required().
@@ -164,12 +164,13 @@ func main() {
 		}
 
 		bot, err := telegram.NewBot(
-			chats, config.telegramToken, config.telegramAdmin,
+			chats, config.telegramToken, config.telegramAdmins[0],
 			telegram.WithLogger(tlogger),
 			telegram.WithAddr(config.listenAddr),
 			telegram.WithAlertmanager(config.alertmanager),
 			telegram.WithRevision(Revision),
 			telegram.WithStartTime(StartTime),
+			telegram.WithExtraAdmins(config.telegramAdmins[1:]...),
 		)
 		if err != nil {
 			level.Error(tlogger).Log("msg", "failed to create bot", "err", err)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -56,7 +57,7 @@ type BotChatStore interface {
 // Bot runs the alertmanager telegram
 type Bot struct {
 	addr         string
-	admin        int
+	admins       []int // must be kept sorted
 	alertmanager *url.URL
 	chats        BotChatStore
 	logger       log.Logger
@@ -102,7 +103,7 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 		telegram:        bot,
 		chats:           chats,
 		addr:            "127.0.0.1:8080",
-		admin:           admin,
+		admins:          []int{admin},
 		alertmanager:    &url.URL{Host: "localhost:9093"},
 		commandsCounter: commandsCounter,
 		webhooksCounter: webhooksCounter,
@@ -111,6 +112,7 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 	for _, opt := range opts {
 		opt(b)
 	}
+	sort.Ints(b.admins)
 
 	return b, nil
 }
@@ -147,6 +149,14 @@ func WithRevision(r string) BotOption {
 func WithStartTime(st time.Time) BotOption {
 	return func(b *Bot) {
 		b.startTime = st
+	}
+}
+
+// WithExtraAdmins allows the specified additional user IDs to issue admin
+// commands to the bot.
+func WithExtraAdmins(ids ...int) BotOption {
+	return func(b *Bot) {
+		b.admins = append(b.admins, ids...)
 	}
 }
 
@@ -190,6 +200,12 @@ func (b *Bot) SendAdminMessage(adminID int, message string) {
 	b.telegram.SendMessage(telebot.User{ID: adminID}, message, nil)
 }
 
+// isAdminID returns whether id is one of the configured admin IDs.
+func (b *Bot) isAdminID(id int) bool {
+	i := sort.SearchInts(b.admins, id)
+	return i < len(b.admins) && b.admins[i] == id
+}
+
 // Run the telegram and listen to messages send to the telegram
 func (b *Bot) Run(ctx context.Context) error {
 	commandSuffix := fmt.Sprintf("@%s", b.telegram.Identity.Username)
@@ -214,7 +230,7 @@ func (b *Bot) Run(ctx context.Context) error {
 			return nil
 		}
 
-		if message.Sender.ID != b.admin {
+		if !b.isAdminID(message.Sender.ID) {
 			b.commandsCounter.WithLabelValues("dropped").Inc()
 			return fmt.Errorf("dropped message from forbidden sender")
 		}
