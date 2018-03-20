@@ -4,12 +4,12 @@ workspace:
 
 pipeline:
   dep:
-    image: metalmatze/dep:1.9
+    image: metalmatze/dep:0.4.1
     commands:
       - dep ensure -v -vendor-only
 
   build:
-    image: golang:alpine
+    image: golang:1.10-alpine
     pull: true
     commands:
       - apk add -U git make
@@ -22,7 +22,7 @@ pipeline:
       event: [ push, tag, pull_request ]
 
   release:
-    image: golang:alpine
+    image: golang:1.10-alpine
     commands:
       - apk add -U git make
       - make release
