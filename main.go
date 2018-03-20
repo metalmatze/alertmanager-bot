@@ -21,6 +21,11 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+const (
+	storeBolt   = "bolt"
+	storeConsul = "consul"
+)
+
 var (
 	// Version of alertmanager-bot.
 	Version string
@@ -71,7 +76,7 @@ func main() {
 	a.Flag("store", "The store to use").
 		Required().
 		Envar("STORE").
-		StringVar(&config.store)
+		EnumVar(&config.store, storeBolt, storeConsul)
 
 	a.Flag("telegram.admin", "The ID of the initial Telegram Admin").
 		Required().
@@ -100,13 +105,13 @@ func main() {
 	var kvStore store.Store
 	{
 		switch strings.ToLower(config.store) {
-		case "bolt":
+		case storeBolt:
 			kvStore, err = boltdb.New([]string{config.boltPath}, &store.Config{Bucket: "alertmanager"})
 			if err != nil {
 				level.Error(logger).Log("msg", "failed to create bolt store backend", "err", err)
 				os.Exit(1)
 			}
-		case "consul":
+		case storeConsul:
 			kvStore, err = consul.New([]string{config.consul.String()}, nil)
 			if err != nil {
 				level.Error(logger).Log("msg", "failed to create consul store backend", "err", err)
