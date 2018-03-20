@@ -17,6 +17,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/joho/godotenv"
+	"github.com/oklog/run"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -124,30 +125,42 @@ func main() {
 		os.Exit(1)
 	}
 
-	bot, err := NewBot(
-		chats, config.telegramToken, config.telegramAdmin,
-		BotWithLogger(logger),
-		BotWithAddr(config.listenAddr),
-		BotWithAlertmanager(config.alertmanager),
-	)
-	if err != nil {
-		level.Error(logger).Log("msg", "failed to create bot", "err", err)
-		os.Exit(2)
+	var g run.Group
+	{
+		bot, err := NewBot(
+			chats, config.telegramToken, config.telegramAdmin,
+			BotWithLogger(logger),
+			BotWithAddr(config.listenAddr),
+			BotWithAlertmanager(config.alertmanager),
+		)
+		if err != nil {
+			level.Error(logger).Log("msg", "failed to create bot", "err", err)
+			os.Exit(2)
+		}
+
+		g.Add(func() error {
+			level.Info(logger).Log(
+				"msg", "starting alertmanager-bot",
+				"version", Version,
+				"revision", Revision,
+				"buildDate", BuildDate,
+				"goVersion", GoVersion,
+			)
+
+			// Runs the webserver in a goroutine sending incoming webhooks to Telegram
+			go bot.RunWebserver()
+
+			// Runs the bot itself communicating with Telegram
+			bot.Run()
+			return nil
+		}, func(err error) {
+		})
 	}
 
-	level.Info(logger).Log(
-		"msg", "starting alertmanager-bot",
-		"version", Version,
-		"revision", Revision,
-		"buildDate", BuildDate,
-		"goVersion", GoVersion,
-	)
-
-	// Runs the webserver in a goroutine sending incoming webhooks to Telegram
-	go bot.RunWebserver()
-
-	// Runs the bot itself communicating with Telegram
-	bot.Run()
+	if err := g.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
 func httpBackoff() *backoff.ExponentialBackOff {

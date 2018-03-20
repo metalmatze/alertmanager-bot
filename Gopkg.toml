@@ -69,3 +69,7 @@ required = ["github.com/boltdb/bolt", "github.com/hashicorp/consul"]
 [[constraint]]
   name = "github.com/hashicorp/consul"
   version = "0.9.3"
+
+[[constraint]]
+  name = "github.com/oklog/run"
+  version = "1.0.0"
