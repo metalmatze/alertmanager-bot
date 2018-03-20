@@ -289,6 +289,7 @@ func (b *Bot) handleChats(message telebot.Message) {
 func (b *Bot) handleStatus(message telebot.Message) {
 	s, err := status(b.logger, b.alertmanager.String())
 	if err != nil {
+		level.Warn(b.logger).Log("msg", "failed to get status", "err", err)
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
 		return
 	}
