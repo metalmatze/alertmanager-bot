@@ -19,7 +19,7 @@ type silencesResponse struct {
 }
 
 func listSilences(logger log.Logger, alertmanagerURL string) ([]types.Silence, error) {
-	resp, err := httpRetry(logger, alertmanagerURL+"/api/v1/silences", http.MethodGet)
+	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/silences")
 	if err != nil {
 		return nil, err
 	}

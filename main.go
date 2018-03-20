@@ -158,7 +158,7 @@ func httpBackoff() *backoff.ExponentialBackOff {
 	return b
 }
 
-func httpRetry(logger log.Logger, url string, method string) (*http.Response, error) {
+func httpRetry(logger log.Logger, method string, url string) (*http.Response, error) {
 	var resp *http.Response
 	var err error
 
@@ -179,11 +179,11 @@ func httpRetry(logger log.Logger, url string, method string) (*http.Response, er
 
 		switch method {
 		case http.MethodGet:
-			if resp.StatusCode != 200 {
+			if resp.StatusCode != http.StatusOK {
 				return fmt.Errorf("status code is %d not 200", resp.StatusCode)
 			}
 		case http.MethodPost:
-			if resp.StatusCode == 400 {
+			if resp.StatusCode == http.StatusBadRequest {
 				return fmt.Errorf("status code is %d not 3xx", resp.StatusCode)
 			}
 		}

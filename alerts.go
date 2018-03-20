@@ -19,7 +19,7 @@ type alertResponse struct {
 }
 
 func listAlerts(logger log.Logger, alertmanagerURL string) ([]types.Alert, error) {
-	resp, err := httpRetry(logger, alertmanagerURL+"/api/v1/alerts", http.MethodGet)
+	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/alerts")
 	if err != nil {
 		return nil, err
 	}
