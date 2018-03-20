@@ -222,6 +222,7 @@ func (b *Bot) Run(ctx context.Context) error {
 				"Sorry, I don't understand...",
 				nil,
 			)
+			return nil
 		}
 
 		b.commandsCounter.WithLabelValues(text).Inc()
