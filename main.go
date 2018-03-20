@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
 	"time"
@@ -157,21 +158,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	var g run.Group
 	{
+		tlogger := log.With(logger, "component", "telegram")
+
 		bot, err := NewBot(
 			chats, config.telegramToken, config.telegramAdmin,
-			BotWithLogger(logger),
+			BotWithLogger(tlogger),
 			BotWithAddr(config.listenAddr),
 			BotWithAlertmanager(config.alertmanager),
 		)
 		if err != nil {
-			level.Error(logger).Log("msg", "failed to create bot", "err", err)
+			level.Error(tlogger).Log("msg", "failed to create bot", "err", err)
 			os.Exit(2)
 		}
 
 		g.Add(func() error {
-			level.Info(logger).Log(
+			level.Info(tlogger).Log(
 				"msg", "starting alertmanager-bot",
 				"version", Version,
 				"revision", Revision,
@@ -183,9 +188,21 @@ func main() {
 			go bot.RunWebserver()
 
 			// Runs the bot itself communicating with Telegram
-			bot.Run()
+			bot.Run(ctx)
 			return nil
 		}, func(err error) {
+			cancel()
+		})
+	}
+	{
+		sig := make(chan os.Signal)
+		signal.Notify(sig, os.Interrupt, os.Kill)
+
+		g.Add(func() error {
+			<-sig
+			return nil
+		}, func(err error) {
+			close(sig)
 		})
 	}
 

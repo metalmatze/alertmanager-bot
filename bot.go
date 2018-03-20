@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -172,7 +173,7 @@ func (b *Bot) SendAdminMessage(adminID int, message string) {
 }
 
 // Run the telegram and listen to messages send to the telegram
-func (b *Bot) Run() {
+func (b *Bot) Run(ctx context.Context) error {
 	commandSuffix := fmt.Sprintf("@%s", b.telegram.Identity.Username)
 
 	commands := map[string]func(message telebot.Message){
@@ -190,25 +191,21 @@ func (b *Bot) Run() {
 		b.commandsCounter.WithLabelValues(command).Add(0)
 	}
 
-	messages := make(chan telebot.Message, 100)
-	b.telegram.Listen(messages, time.Second)
-
-	for message := range messages {
+	process := func(message telebot.Message) error {
 		if message.IsService() {
-			continue
+			return nil
 		}
 
 		if message.Sender.ID != b.admin {
 			b.commandsCounter.WithLabelValues("dropped").Inc()
-			level.Info(b.logger).Log(
-				"msg", "dropped message from forbidden sender",
-				"sender_id", message.Sender.ID,
-				"sender_username", message.Sender.Username,
-			)
-			continue
+			return fmt.Errorf("dropped message from forbidden sender")
+
+			return nil
 		}
 
-		b.telegram.SendChatAction(message.Chat, telebot.Typing)
+		if err := b.telegram.SendChatAction(message.Chat, telebot.Typing); err != nil {
+			return err
+		}
 
 		// Remove the command suffix from the text, /help@BotName => /help
 		text := strings.Replace(message.Text, commandSuffix, "", -1)
@@ -218,16 +215,39 @@ func (b *Bot) Run() {
 		level.Debug(b.logger).Log("msg", "message received", "text", text)
 
 		// Get the corresponding handler from the map by the commands text
-		if handler, ok := commands[text]; ok {
-			b.commandsCounter.WithLabelValues(text).Inc()
-			handler(message)
-		} else {
+		handler, ok := commands[text]
+
+		if !ok {
 			b.commandsCounter.WithLabelValues("incomprehensible").Inc()
 			b.telegram.SendMessage(
 				message.Chat,
 				"Sorry, I don't understand...",
 				nil,
 			)
+		}
+
+		b.commandsCounter.WithLabelValues(text).Inc()
+		handler(message)
+
+		return nil
+	}
+
+	messages := make(chan telebot.Message, 100)
+	b.telegram.Listen(messages, time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case message := <-messages:
+			if err := process(message); err != nil {
+				level.Info(b.logger).Log(
+					"msg", "failed to process message",
+					"err", err,
+					"sender_id", message.Sender.ID,
+					"sender_username", message.Sender.Username,
+				)
+			}
 		}
 	}
 }
