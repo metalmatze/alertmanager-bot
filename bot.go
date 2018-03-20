@@ -199,8 +199,6 @@ func (b *Bot) Run(ctx context.Context) error {
 		if message.Sender.ID != b.admin {
 			b.commandsCounter.WithLabelValues("dropped").Inc()
 			return fmt.Errorf("dropped message from forbidden sender")
-
-			return nil
 		}
 
 		if err := b.telegram.SendChatAction(message.Chat, telebot.Typing); err != nil {
