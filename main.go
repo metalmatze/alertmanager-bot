@@ -24,6 +24,11 @@ import (
 const (
 	storeBolt   = "bolt"
 	storeConsul = "consul"
+
+	levelDebug = "debug"
+	levelInfo  = "info"
+	levelWarn  = "warn"
+	levelError = "error"
 )
 
 var (
@@ -47,6 +52,8 @@ func main() {
 		boltPath      string
 		consul        *url.URL
 		listenAddr    string
+		logLevel      string
+		logJSON       bool
 		store         string
 		telegramAdmin int
 		telegramToken string
@@ -73,6 +80,15 @@ func main() {
 		Envar("LISTEN_ADDR").
 		StringVar(&config.listenAddr)
 
+	a.Flag("log.json", "Tell the application to log json and not key value pairs").
+		Envar("LOG_JSON").
+		BoolVar(&config.logJSON)
+
+	a.Flag("log.level", "The log level to use for filtering logs").
+		Envar("LOG_LEVEL").
+		Default(levelInfo).
+		EnumVar(&config.logLevel, levelError, levelWarn, levelInfo, levelDebug)
+
 	a.Flag("store", "The store to use").
 		Required().
 		Envar("STORE").
@@ -95,8 +111,19 @@ func main() {
 		os.Exit(2)
 	}
 
+	levelFilter := map[string]level.Option{
+		levelError: level.AllowError(),
+		levelWarn:  level.AllowWarn(),
+		levelInfo:  level.AllowInfo(),
+		levelDebug: level.AllowDebug(),
+	}
+
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = level.NewFilter(logger, level.AllowAll())
+	if config.logJSON {
+		logger = log.NewJSONLogger(log.NewSyncWriter(os.Stderr))
+	}
+
+	logger = level.NewFilter(logger, levelFilter[config.logLevel])
 	logger = log.With(logger,
 		"ts", log.DefaultTimestampUTC,
 		"caller", log.DefaultCaller,
