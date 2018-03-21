@@ -28,7 +28,7 @@ required = ["github.com/boltdb/bolt", "github.com/hashicorp/consul"]
 
 [[constraint]]
   name = "github.com/go-kit/kit"
-  version = "0.6.0"
+  version = "0.7.0"
 
 [[constraint]]
   name = "github.com/hako/durafmt"

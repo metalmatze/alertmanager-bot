@@ -207,8 +207,8 @@
     "log",
     "log/level"
   ]
-  revision = "4dc7be5d2d12881735283bcab7352178e190fc71"
-  version = "v0.6.0"
+  revision = "ca4112baa34cb55091301bdc13b1420a122b1b9e"
+  version = "v0.7.0"
 
 [[projects]]
   name = "github.com/go-logfmt/logfmt"
@@ -809,6 +809,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "307392f4efa06c53b3a52fd8e4ff25a4ca50e0f071419e418cc04cf3e2ccb8c0"
+  inputs-digest = "a573aff579b70447e1f8875d92bb81a73e30e841791af57ce32eee9bd17e3dfe"
   solver-name = "gps-cdcl"
   solver-version = 1
