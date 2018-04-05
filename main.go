@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -11,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff"
 	"github.com/docker/libkv/store"
 	"github.com/docker/libkv/store/boltdb"
 	"github.com/docker/libkv/store/consul"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/joho/godotenv"
+	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -152,23 +151,25 @@ func main() {
 	}
 	defer kvStore.Close()
 
-	chats, err := NewChatStore(kvStore)
-	if err != nil {
-		level.Error(logger).Log("msg", "failed to create chat store", "err", err)
-		os.Exit(1)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var g run.Group
 	{
 		tlogger := log.With(logger, "component", "telegram")
 
-		bot, err := NewBot(
+		chats, err := telegram.NewChatStore(kvStore)
+		if err != nil {
+			level.Error(logger).Log("msg", "failed to create chat store", "err", err)
+			os.Exit(1)
+		}
+
+		bot, err := telegram.NewBot(
 			chats, config.telegramToken, config.telegramAdmin,
-			BotWithLogger(tlogger),
-			BotWithAddr(config.listenAddr),
-			BotWithAlertmanager(config.alertmanager),
+			telegram.WithLogger(tlogger),
+			telegram.WithAddr(config.listenAddr),
+			telegram.WithAlertmanager(config.alertmanager),
+			telegram.WithRevision(Revision),
+			telegram.WithStartTime(StartTime),
 		)
 		if err != nil {
 			level.Error(tlogger).Log("msg", "failed to create bot", "err", err)

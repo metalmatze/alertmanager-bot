@@ -1,4 +1,4 @@
-package main
+package telegram
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
+	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tucnak/telebot"
@@ -59,7 +60,10 @@ type Bot struct {
 	alertmanager *url.URL
 	chats        BotChatStore
 	logger       log.Logger
-	telegram     *telebot.Bot
+	revision     string
+	startTime    time.Time
+
+	telegram *telebot.Bot
 
 	commandsCounter *prometheus.CounterVec
 	webhooksCounter prometheus.Counter
@@ -111,24 +115,38 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 	return b, nil
 }
 
-// BotWithLogger sets the logger for the Bot as an option
-func BotWithLogger(l log.Logger) BotOption {
+// WithLogger sets the logger for the Bot as an option
+func WithLogger(l log.Logger) BotOption {
 	return func(b *Bot) {
 		b.logger = l
 	}
 }
 
-// BotWithAddr sets the internal listening addr of the bot's web server receiving webhooks
-func BotWithAddr(addr string) BotOption {
+// WithAddr sets the internal listening addr of the bot's web server receiving webhooks
+func WithAddr(addr string) BotOption {
 	return func(b *Bot) {
 		b.addr = addr
 	}
 }
 
-// BotWithAlertmanager sets the connection url for the Alertmanager
-func BotWithAlertmanager(u *url.URL) BotOption {
+// WithAlertmanager sets the connection url for the Alertmanager
+func WithAlertmanager(u *url.URL) BotOption {
 	return func(b *Bot) {
 		b.alertmanager = u
+	}
+}
+
+// WithRevision is setting the Bot's revision for status commands
+func WithRevision(r string) BotOption {
+	return func(b *Bot) {
+		b.revision = r
+	}
+}
+
+// WithStartTime is setting the Bot's start time for status commands
+func WithStartTime(st time.Time) BotOption {
+	return func(b *Bot) {
+		b.startTime = st
 	}
 }
 
@@ -136,7 +154,7 @@ func BotWithAlertmanager(u *url.URL) BotOption {
 func (b *Bot) RunWebserver() {
 	messages := make(chan string, 100)
 
-	http.HandleFunc("/", HandleWebhook(b.logger, b.webhooksCounter, messages))
+	http.HandleFunc("/", alertmanager.HandleWebhook(b.logger, b.webhooksCounter, messages))
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/healthz", handleHealth)
@@ -306,7 +324,7 @@ func (b *Bot) handleChats(message telebot.Message) {
 }
 
 func (b *Bot) handleStatus(message telebot.Message) {
-	s, err := status(b.logger, b.alertmanager.String())
+	s, err := alertmanager.Status(b.logger, b.alertmanager.String())
 	if err != nil {
 		level.Warn(b.logger).Log("msg", "failed to get status", "err", err)
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
@@ -314,7 +332,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 	}
 
 	uptime := durafmt.Parse(time.Since(s.Data.Uptime))
-	uptimeBot := durafmt.Parse(time.Since(StartTime))
+	uptimeBot := durafmt.Parse(time.Since(b.startTime))
 
 	b.telegram.SendMessage(
 		message.Chat,
@@ -322,7 +340,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 			"*AlertManager*\nVersion: %s\nUptime: %s\n*AlertManager Bot*\nVersion: %s\nUptime: %s",
 			s.Data.VersionInfo.Version,
 			uptime,
-			Revision,
+			b.revision,
 			uptimeBot,
 		),
 		&telebot.SendOptions{ParseMode: telebot.ModeMarkdown},
@@ -330,7 +348,7 @@ func (b *Bot) handleStatus(message telebot.Message) {
 }
 
 func (b *Bot) handleAlerts(message telebot.Message) {
-	alerts, err := listAlerts(b.logger, b.alertmanager.String())
+	alerts, err := alertmanager.ListAlerts(b.logger, b.alertmanager.String())
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
 		return
@@ -343,14 +361,14 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 
 	var out string
 	for _, a := range alerts {
-		out = out + AlertMessage(a) + "\n"
+		out = out + alertmanager.AlertMessage(a) + "\n"
 	}
 
 	b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 }
 
 func (b *Bot) handleSilences(message telebot.Message) {
-	silences, err := listSilences(b.logger, b.alertmanager.String())
+	silences, err := alertmanager.ListSilences(b.logger, b.alertmanager.String())
 	if err != nil {
 		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
 		return
@@ -363,7 +381,7 @@ func (b *Bot) handleSilences(message telebot.Message) {
 
 	var out string
 	for _, silence := range silences {
-		out = out + SilenceMessage(silence) + "\n"
+		out = out + alertmanager.SilenceMessage(silence) + "\n"
 	}
 
 	b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
