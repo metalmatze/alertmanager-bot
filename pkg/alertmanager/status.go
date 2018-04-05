@@ -1,4 +1,4 @@
-package main
+package alertmanager
 
 import (
 	"encoding/json"
@@ -23,7 +23,7 @@ type statusResponse struct {
 	} `json:"data"`
 }
 
-func status(logger log.Logger, alertmanagerURL string) (statusResponse, error) {
+func Status(logger log.Logger, alertmanagerURL string) (statusResponse, error) {
 	var statusResponse statusResponse
 
 	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/status")

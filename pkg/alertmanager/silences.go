@@ -1,4 +1,4 @@
-package main
+package alertmanager
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ type silencesResponse struct {
 	Status string          `json:"status"`
 }
 
-func listSilences(logger log.Logger, alertmanagerURL string) ([]types.Silence, error) {
+func ListSilences(logger log.Logger, alertmanagerURL string) ([]types.Silence, error) {
 	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/silences")
 	if err != nil {
 		return nil, err

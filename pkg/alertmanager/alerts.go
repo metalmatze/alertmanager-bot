@@ -1,4 +1,4 @@
-package main
+package alertmanager
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ type alertResponse struct {
 	Alerts []types.Alert `json:"data,omitempty"`
 }
 
-func listAlerts(logger log.Logger, alertmanagerURL string) ([]types.Alert, error) {
+func ListAlerts(logger log.Logger, alertmanagerURL string) ([]types.Alert, error) {
 	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/alerts")
 	if err != nil {
 		return nil, err
