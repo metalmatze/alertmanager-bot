@@ -152,6 +152,13 @@ ENV Variable | Description
 | TELEGRAM_ADMIN    | The Telegram user id for the admin |
 | TELEGRAM_TOKEN    | Token you get from [@botfather](https://telegram.me/botfather) |
 
+#### Authentication
+
+Additional users may be allowed to command the bot by giving multiple instances
+of the `--telegram.admin` command line option or by specifying a
+newline-separated list of telegram user IDs in the `TELEGRAM_ADMIN` environment
+variable.
+
 #### Alertmanager Configuration 
 
 Now you need to connect the Alertmanager to send alerts to the bot.  
@@ -194,11 +201,6 @@ alertmanager-bot
 * `/silence` - show a specific silence  
 * `/silence_del` - delete a silence by command  
 * `/silence_add` - add a silence for a alert by command
-
-##### Authentication
-
-Right now only one user can use the bot by giving the bot one telegram user id.  
-Others can just read what the Bot sends to a group chat.
 
 ##### More Messengers
 
