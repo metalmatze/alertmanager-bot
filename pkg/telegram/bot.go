@@ -112,7 +112,6 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 	for _, opt := range opts {
 		opt(b)
 	}
-	sort.Ints(b.admins)
 
 	return b, nil
 }
@@ -157,6 +156,7 @@ func WithStartTime(st time.Time) BotOption {
 func WithExtraAdmins(ids ...int) BotOption {
 	return func(b *Bot) {
 		b.admins = append(b.admins, ids...)
+		sort.Ints(b.admins)
 	}
 }
 
