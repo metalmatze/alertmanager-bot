@@ -2,6 +2,7 @@
 /alertmanager-bot
 /coverage.out
 /data.yml
+/dist/
 /vendor/
 
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
