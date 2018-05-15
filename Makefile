@@ -1,4 +1,4 @@
-EXECUTABLE ?= alertmanager-telegram
+EXECUTABLE ?= alertmanager-bot
 IMAGE ?= metalmatze/$(EXECUTABLE)
 GO := CGO_ENABLED=0 go
 DATE := $(shell date -u '+%FT%T%z')
@@ -48,4 +48,4 @@ release:
 	@which gox > /dev/null; if [ $$? -ne 0 ]; then \
 		$(GO) get -u github.com/mitchellh/gox; \
 	fi
-	CGO_ENABLED=0 gox -verbose -ldflags '-w $(LDFLAGS)' -output="dist/$(EXECUTABLE)-${DRONE_TAG}-{{.OS}}-{{.Arch}}" ./cmd/alertmanager-bot/
+	CGO_ENABLED=0 gox -arch="386 amd64 arm" -verbose -ldflags '-w $(LDFLAGS)' -output="dist/$(EXECUTABLE)-${DRONE_TAG}-{{.OS}}-{{.Arch}}" ./cmd/alertmanager-bot/
