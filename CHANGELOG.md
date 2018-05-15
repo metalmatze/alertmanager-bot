@@ -1,3 +1,10 @@
+## 0.3.0 / 2018-05-15
+
+* [FEATURE] Allow for multiple bot admin users [#19](https://github.com/metalmatze/alertmanager-bot/pull/19), thanks @slrz.
+* [FEATURE] Add log.level and log.json as cli flags [[9050ff4]](https://github.com/metalmatze/alertmanager-bot/commit/9050ff418bf5a07fcd684fb01fa7838a36b0af38).
+* [ENHANCEMENT] Handle Ctrl+C interrupts and shutdown bot gracefully [[07c2356]](https://github.com/metalmatze/alertmanager-bot/commit/07c23563800e62e97cc0437a47cefd1aea332a82).
+* [ENHANCEMENT] Internal refactoring of HTTP calls [#15](https://github.com/metalmatze/alertmanager-bot/pull/15), thanks @vtolstov.
+
 ## 0.2.1 / 2017-11-04
 
 * [BUGFIX] /chats command send to the sender and not the chat [#10](https://github.com/metalmatze/alertmanager-bot/issues/10)
