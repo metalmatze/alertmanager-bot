@@ -18,6 +18,7 @@ type silencesResponse struct {
 	Status string          `json:"status"`
 }
 
+// ListSilences returns a slice of Silence and an error.
 func ListSilences(logger log.Logger, alertmanagerURL string) ([]types.Silence, error) {
 	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/silences")
 	if err != nil {

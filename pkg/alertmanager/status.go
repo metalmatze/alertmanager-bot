@@ -8,7 +8,8 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-type statusResponse struct {
+// StatusResponse is the data returned by Alertmanager about its current status.
+type StatusResponse struct {
 	Status string `json:"status"`
 	Data   struct {
 		Uptime      time.Time `json:"uptime"`
@@ -23,8 +24,9 @@ type statusResponse struct {
 	} `json:"data"`
 }
 
-func Status(logger log.Logger, alertmanagerURL string) (statusResponse, error) {
-	var statusResponse statusResponse
+// Status returns a StatusResponse or an error.
+func Status(logger log.Logger, alertmanagerURL string) (StatusResponse, error) {
+	var statusResponse StatusResponse
 
 	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/status")
 	if err != nil {
