@@ -54,9 +54,13 @@ func AlertMessage(a types.Alert) string {
 	return fmt.Sprintf(
 		"%s\n*%s* (%s)\n%s\n%s\n",
 		status,
-		a.Labels["alertname"],
-		a.Annotations["summary"],
-		a.Annotations["description"],
+		escape(a.Labels["alertname"]),
+		escape(a.Annotations["summary"]),
+		escape(a.Annotations["description"]),
 		duration,
 	)
+}
+
+func escape(s model.LabelValue) string {
+	return strings.Replace(string(s), "_", "\\_", -1)
 }
