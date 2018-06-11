@@ -1,3 +1,7 @@
+## 0.3.1 / 2018-06-11
+
+* [BUGFIX] Escape emojis in messages [#22](https://github.com/metalmatze/alertmanager-bot/pull/22), thanks @caarlos0.
+
 ## 0.3.0 / 2018-05-15
 
 * [FEATURE] Allow for multiple bot admin users [#19](https://github.com/metalmatze/alertmanager-bot/pull/19), thanks @slrz.
