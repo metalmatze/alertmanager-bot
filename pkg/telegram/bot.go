@@ -14,6 +14,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
+	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tucnak/telebot"
@@ -59,6 +60,7 @@ type Bot struct {
 	addr         string
 	admins       []int // must be kept sorted
 	alertmanager *url.URL
+	templates    *template.Template
 	chats        BotChatStore
 	logger       log.Logger
 	revision     string
@@ -107,6 +109,7 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 		alertmanager:    &url.URL{Host: "localhost:9093"},
 		commandsCounter: commandsCounter,
 		webhooksCounter: webhooksCounter,
+		// TODO: initialize templates with default?
 	}
 
 	for _, opt := range opts {
@@ -134,6 +137,12 @@ func WithAddr(addr string) BotOption {
 func WithAlertmanager(u *url.URL) BotOption {
 	return func(b *Bot) {
 		b.alertmanager = u
+	}
+}
+
+func WithTemplates(t *template.Template) BotOption {
+	return func(b *Bot) {
+		b.templates = t
 	}
 }
 
@@ -375,12 +384,24 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 		return
 	}
 
-	var out string
-	for _, a := range alerts {
-		out = out + alertmanager.AlertMessage(a) + "\n"
-	}
+	data := b.templates.Data("default", nil, alerts[0])
+	fmt.Println(data)
 
-	b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+	title, err := b.templates.ExecuteTextString(b.templates, data)
+	fmt.Println(title)
+
+	//var out string
+	//for _, a := range alerts {
+	//	out = out + alertmanager.AlertMessage(a) + "jaja" + "\n"
+	//}
+	//
+	//b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+
+	err = b.telegram.SendMessage(message.Chat, "<b>hello</b> <i>world</i>", &telebot.SendOptions{ParseMode: telebot.ModeHTML})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 }
 
 func (b *Bot) handleSilences(message telebot.Message) {

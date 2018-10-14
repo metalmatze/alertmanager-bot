@@ -50,7 +50,7 @@ func HandleWebhook(logger log.Logger, counter prometheus.Counter, messages chan<
 				annotations[model.LabelName(k)] = model.LabelValue(v)
 			}
 
-			alert := types.Alert{
+			alert := &types.Alert{
 				Alert: model.Alert{
 					StartsAt:     webAlert.StartsAt,
 					EndsAt:       webAlert.EndsAt,

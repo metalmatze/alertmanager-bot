@@ -18,6 +18,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
+	"github.com/prometheus/alertmanager/template"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -129,6 +130,13 @@ func main() {
 		"caller", log.DefaultCaller,
 	)
 
+	tmpl, err := template.FromGlobs("default.tmpl")
+	if err != nil {
+		level.Error(logger).Log("msg", "failed to parse templates", "err", err)
+		os.Exit(1)
+	}
+	tmpl.ExternalURL = config.alertmanager
+
 	var kvStore store.Store
 	{
 		switch strings.ToLower(config.store) {
@@ -168,6 +176,7 @@ func main() {
 			telegram.WithLogger(tlogger),
 			telegram.WithAddr(config.listenAddr),
 			telegram.WithAlertmanager(config.alertmanager),
+			telegram.WithTemplates(tmpl),
 			telegram.WithRevision(Revision),
 			telegram.WithStartTime(StartTime),
 			telegram.WithExtraAdmins(config.telegramAdmins[1:]...),

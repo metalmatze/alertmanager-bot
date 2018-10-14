@@ -14,12 +14,12 @@ import (
 )
 
 type alertResponse struct {
-	Status string        `json:"status"`
-	Alerts []types.Alert `json:"data,omitempty"`
+	Status string         `json:"status"`
+	Alerts []*types.Alert `json:"data,omitempty"`
 }
 
 // ListAlerts returns a slice of Alert and an error.
-func ListAlerts(logger log.Logger, alertmanagerURL string) ([]types.Alert, error) {
+func ListAlerts(logger log.Logger, alertmanagerURL string) ([]*types.Alert, error) {
 	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/alerts")
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func ListAlerts(logger log.Logger, alertmanagerURL string) ([]types.Alert, error
 }
 
 // AlertMessage converts an alert to a message string
-func AlertMessage(a types.Alert) string {
+func AlertMessage(a *types.Alert) string {
 	var status, duration string
 	switch a.Status() {
 	case model.AlertFiring:
