@@ -15,6 +15,7 @@ import (
 	"github.com/docker/libkv/store/consul"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
@@ -130,12 +131,25 @@ func main() {
 		"caller", log.DefaultCaller,
 	)
 
-	tmpl, err := template.FromGlobs("default.tmpl")
-	if err != nil {
-		level.Error(logger).Log("msg", "failed to parse templates", "err", err)
-		os.Exit(1)
+	var tmpl *template.Template
+	{
+		funcs := template.DefaultFuncs
+		funcs["since"] = func(t time.Time) string {
+			return durafmt.Parse(time.Since(t)).String()
+		}
+		funcs["duration"] = func(start time.Time, end time.Time) string {
+			return durafmt.Parse(end.Sub(start)).String()
+		}
+
+		template.DefaultFuncs = funcs
+
+		tmpl, err = template.FromGlobs("default.tmpl")
+		if err != nil {
+			level.Error(logger).Log("msg", "failed to parse templates", "err", err)
+			os.Exit(1)
+		}
+		tmpl.ExternalURL = config.alertmanager
 	}
-	tmpl.ExternalURL = config.alertmanager
 
 	var kvStore store.Store
 	{
