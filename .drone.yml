@@ -4,7 +4,7 @@ workspace:
 
 pipeline:
   dep:
-    image: metalmatze/dep:0.4.1
+    image: metalmatze/dep:0.5.0
     commands:
       - dep ensure -v -vendor-only
 
