@@ -59,6 +59,7 @@ func main() {
 		store          string
 		telegramAdmins []int
 		telegramToken  string
+		templatesPaths []string
 	}{}
 
 	a := kingpin.New("alertmanager-bot", "Bot for Prometheus' Alertmanager")
@@ -106,6 +107,11 @@ func main() {
 		Envar("TELEGRAM_TOKEN").
 		StringVar(&config.telegramToken)
 
+	a.Flag("template.paths", "The paths to the template").
+		Envar("TEMPLATE_PATHS").
+		Default("./default.tmpl").
+		ExistingFilesVar(&config.templatesPaths)
+
 	_, err := a.Parse(os.Args[1:])
 	if err != nil {
 		fmt.Printf("error parsing commandline arguments: %v\n", err)
@@ -143,7 +149,7 @@ func main() {
 
 		template.DefaultFuncs = funcs
 
-		tmpl, err = template.FromGlobs("default.tmpl")
+		tmpl, err = template.FromGlobs(config.templatesPaths...)
 		if err != nil {
 			level.Error(logger).Log("msg", "failed to parse templates", "err", err)
 			os.Exit(1)
