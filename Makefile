@@ -37,11 +37,9 @@ lint:
 test:
 	@for PKG in $(PACKAGES); do go test -cover -coverprofile $$GOPATH/src/$$PKG/coverage.out $$PKG || exit 1; done;
 
-$(EXECUTABLE): $(wildcard *.go)
-	$(GO) build -v -ldflags '-w $(LDFLAGS)' ./cmd/alertmanager-bot
-
 .PHONY: build
-build: $(EXECUTABLE)
+build:
+	$(GO) build -v -ldflags '-w $(LDFLAGS)' ./cmd/alertmanager-bot
 
 .PHONY: release
 release:
