@@ -142,6 +142,7 @@ func WithAlertmanager(u *url.URL) BotOption {
 	}
 }
 
+// WithTemplates uses Alertmanager template to render messages for Telegram
 func WithTemplates(t *template.Template) BotOption {
 	return func(b *Bot) {
 		b.templates = t
