@@ -15,9 +15,11 @@ import (
 	"github.com/docker/libkv/store/consul"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
+	"github.com/prometheus/alertmanager/template"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -57,6 +59,7 @@ func main() {
 		store          string
 		telegramAdmins []int
 		telegramToken  string
+		templatesPaths []string
 	}{}
 
 	a := kingpin.New("alertmanager-bot", "Bot for Prometheus' Alertmanager")
@@ -104,6 +107,11 @@ func main() {
 		Envar("TELEGRAM_TOKEN").
 		StringVar(&config.telegramToken)
 
+	a.Flag("template.paths", "The paths to the template").
+		Envar("TEMPLATE_PATHS").
+		Default("./default.tmpl").
+		ExistingFilesVar(&config.templatesPaths)
+
 	_, err := a.Parse(os.Args[1:])
 	if err != nil {
 		fmt.Printf("error parsing commandline arguments: %v\n", err)
@@ -128,6 +136,26 @@ func main() {
 		"ts", log.DefaultTimestampUTC,
 		"caller", log.DefaultCaller,
 	)
+
+	var tmpl *template.Template
+	{
+		funcs := template.DefaultFuncs
+		funcs["since"] = func(t time.Time) string {
+			return durafmt.Parse(time.Since(t)).String()
+		}
+		funcs["duration"] = func(start time.Time, end time.Time) string {
+			return durafmt.Parse(end.Sub(start)).String()
+		}
+
+		template.DefaultFuncs = funcs
+
+		tmpl, err = template.FromGlobs(config.templatesPaths...)
+		if err != nil {
+			level.Error(logger).Log("msg", "failed to parse templates", "err", err)
+			os.Exit(1)
+		}
+		tmpl.ExternalURL = config.alertmanager
+	}
 
 	var kvStore store.Store
 	{
@@ -168,6 +196,7 @@ func main() {
 			telegram.WithLogger(tlogger),
 			telegram.WithAddr(config.listenAddr),
 			telegram.WithAlertmanager(config.alertmanager),
+			telegram.WithTemplates(tmpl),
 			telegram.WithRevision(Revision),
 			telegram.WithStartTime(StartTime),
 			telegram.WithExtraAdmins(config.telegramAdmins[1:]...),

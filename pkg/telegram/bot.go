@@ -14,6 +14,9 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
+	"github.com/prometheus/alertmanager/notify"
+	"github.com/prometheus/alertmanager/template"
+	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tucnak/telebot"
@@ -59,6 +62,7 @@ type Bot struct {
 	addr         string
 	admins       []int // must be kept sorted
 	alertmanager *url.URL
+	templates    *template.Template
 	chats        BotChatStore
 	logger       log.Logger
 	revision     string
@@ -107,6 +111,7 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 		alertmanager:    &url.URL{Host: "localhost:9093"},
 		commandsCounter: commandsCounter,
 		webhooksCounter: webhooksCounter,
+		// TODO: initialize templates with default?
 	}
 
 	for _, opt := range opts {
@@ -137,6 +142,13 @@ func WithAlertmanager(u *url.URL) BotOption {
 	}
 }
 
+// WithTemplates uses Alertmanager template to render messages for Telegram
+func WithTemplates(t *template.Template) BotOption {
+	return func(b *Bot) {
+		b.templates = t
+	}
+}
+
 // WithRevision is setting the Bot's revision for status commands
 func WithRevision(r string) BotOption {
 	return func(b *Bot) {
@@ -162,14 +174,14 @@ func WithExtraAdmins(ids ...int) BotOption {
 
 // RunWebserver starts a http server and listens for messages to send to the users
 func (b *Bot) RunWebserver() {
-	messages := make(chan string, 100)
+	webhooks := make(chan notify.WebhookMessage, 32)
 
-	http.HandleFunc("/", alertmanager.HandleWebhook(b.logger, b.webhooksCounter, messages))
+	http.HandleFunc("/", alertmanager.HandleWebhook(b.logger, b.webhooksCounter, webhooks))
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/healthz", handleHealth)
 
-	go b.sendWebhook(messages)
+	go b.sendWebhook(webhooks)
 
 	err := http.ListenAndServe(b.addr, nil)
 	level.Error(b.logger).Log("err", err)
@@ -181,16 +193,32 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 // sendWebhook sends messages received via webhook to all subscribed chats
-func (b *Bot) sendWebhook(messages <-chan string) {
-	for m := range messages {
+func (b *Bot) sendWebhook(webhooks <-chan notify.WebhookMessage) {
+	for w := range webhooks {
 		chats, err := b.chats.List()
 		if err != nil {
 			level.Error(b.logger).Log("msg", "failed to get chat list from store", "err", err)
 			continue
 		}
 
+		data := &template.Data{
+			Receiver:          w.Receiver,
+			Status:            w.Status,
+			Alerts:            w.Alerts,
+			GroupLabels:       w.GroupLabels,
+			CommonLabels:      w.CommonLabels,
+			CommonAnnotations: w.CommonAnnotations,
+			ExternalURL:       w.ExternalURL,
+		}
+
+		out, err := b.templates.ExecuteHTMLString(`{{ template "telegram.default" . }}`, data)
+		if err != nil {
+			level.Warn(b.logger).Log("msg", "failed to template alerts", "err", err)
+			return
+		}
+
 		for _, chat := range chats {
-			b.telegram.SendMessage(chat, m, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+			b.telegram.SendMessage(chat, out, &telebot.SendOptions{ParseMode: telebot.ModeHTML})
 		}
 	}
 }
@@ -375,12 +403,17 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 		return
 	}
 
-	var out string
-	for _, a := range alerts {
-		out = out + alertmanager.AlertMessage(a) + "\n"
+	out, err := b.tmplAlerts(alerts...)
+	if err != nil {
+		return
 	}
 
-	b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+	err = b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{
+		ParseMode: telebot.ModeHTML,
+	})
+	if err != nil {
+		level.Warn(b.logger).Log("msg", "failed to send message", "err", err)
+	}
 }
 
 func (b *Bot) handleSilences(message telebot.Message) {
@@ -401,4 +434,15 @@ func (b *Bot) handleSilences(message telebot.Message) {
 	}
 
 	b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+}
+
+func (b *Bot) tmplAlerts(alerts ...*types.Alert) (string, error) {
+	data := b.templates.Data("default", nil, alerts...)
+
+	out, err := b.templates.ExecuteHTMLString(`{{ template "telegram.default" . }}`, data)
+	if err != nil {
+		return "", err
+	}
+
+	return out, nil
 }
