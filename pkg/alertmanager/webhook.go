@@ -36,6 +36,11 @@ func HandleWebhook(logger log.Logger, counter prometheus.Counter, webhooks chan<
 			return
 		}
 
+		level.Debug(logger).Log(
+			"msg", "received webhook",
+			"alerts", len(webhook.Alerts),
+		)
+
 		webhooks <- webhook
 		counter.Inc()
 	}
