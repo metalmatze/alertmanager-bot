@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -17,9 +18,13 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
+	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
+	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/template"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -181,6 +186,9 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// TODO Needs fan out for multiple bots
+	webhooks := make(chan notify.WebhookMessage, 32)
+
 	var g run.Group
 	{
 		tlogger := log.With(logger, "component", "telegram")
@@ -215,14 +223,44 @@ func main() {
 				"goVersion", GoVersion,
 			)
 
-			// Runs the webserver in a goroutine sending incoming webhooks to Telegram
-			go bot.RunWebserver()
-
 			// Runs the bot itself communicating with Telegram
-			bot.Run(ctx)
-			return nil
+			return bot.Run(ctx, webhooks)
 		}, func(err error) {
 			cancel()
+		})
+	}
+	{
+		wlogger := log.With(logger, "component", "webserver")
+
+		// TODO: Use Heptio's healthcheck library
+		handleHealth := func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}
+
+		webhooksCounter := prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "alertmanagerbot",
+			Name:      "webhooks_total",
+			Help:      "Number of webhooks received by this bot",
+		})
+
+		prometheus.MustRegister(webhooksCounter)
+
+		m := http.NewServeMux()
+		m.HandleFunc("/", alertmanager.HandleWebhook(wlogger, webhooksCounter, webhooks))
+		m.Handle("/metrics", promhttp.Handler())
+		m.HandleFunc("/health", handleHealth)
+		m.HandleFunc("/healthz", handleHealth)
+
+		s := http.Server{
+			Addr:    config.listenAddr,
+			Handler: m,
+		}
+
+		g.Add(func() error {
+			level.Info(wlogger).Log("msg", "starting webserver", "addr", config.listenAddr)
+			return s.ListenAndServe()
+		}, func(err error) {
+			s.Shutdown(context.Background())
 		})
 	}
 	{
@@ -233,6 +271,7 @@ func main() {
 			<-sig
 			return nil
 		}, func(err error) {
+			cancel()
 			close(sig)
 		})
 	}

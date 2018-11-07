@@ -3,9 +3,7 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -14,11 +12,11 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
+	"github.com/oklog/run"
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tucnak/telebot"
 )
 
@@ -93,15 +91,6 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 		return nil, err
 	}
 
-	webhooksCounter := prometheus.NewCounter(prometheus.CounterOpts{
-		Namespace: "alertmanagerbot",
-		Name:      "webhooks_total",
-		Help:      "Number of webhooks received by this bot",
-	})
-	if err := prometheus.Register(webhooksCounter); err != nil {
-		return nil, err
-	}
-
 	b := &Bot{
 		logger:          log.NewNopLogger(),
 		telegram:        bot,
@@ -110,7 +99,6 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 		admins:          []int{admin},
 		alertmanager:    &url.URL{Host: "localhost:9093"},
 		commandsCounter: commandsCounter,
-		webhooksCounter: webhooksCounter,
 		// TODO: initialize templates with default?
 	}
 
@@ -172,57 +160,6 @@ func WithExtraAdmins(ids ...int) BotOption {
 	}
 }
 
-// RunWebserver starts a http server and listens for messages to send to the users
-func (b *Bot) RunWebserver() {
-	webhooks := make(chan notify.WebhookMessage, 32)
-
-	http.HandleFunc("/", alertmanager.HandleWebhook(b.logger, b.webhooksCounter, webhooks))
-	http.Handle("/metrics", promhttp.Handler())
-	http.HandleFunc("/health", handleHealth)
-	http.HandleFunc("/healthz", handleHealth)
-
-	go b.sendWebhook(webhooks)
-
-	err := http.ListenAndServe(b.addr, nil)
-	level.Error(b.logger).Log("err", err)
-	os.Exit(1)
-}
-
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
-
-// sendWebhook sends messages received via webhook to all subscribed chats
-func (b *Bot) sendWebhook(webhooks <-chan notify.WebhookMessage) {
-	for w := range webhooks {
-		chats, err := b.chats.List()
-		if err != nil {
-			level.Error(b.logger).Log("msg", "failed to get chat list from store", "err", err)
-			continue
-		}
-
-		data := &template.Data{
-			Receiver:          w.Receiver,
-			Status:            w.Status,
-			Alerts:            w.Alerts,
-			GroupLabels:       w.GroupLabels,
-			CommonLabels:      w.CommonLabels,
-			CommonAnnotations: w.CommonAnnotations,
-			ExternalURL:       w.ExternalURL,
-		}
-
-		out, err := b.templates.ExecuteHTMLString(`{{ template "telegram.default" . }}`, data)
-		if err != nil {
-			level.Warn(b.logger).Log("msg", "failed to template alerts", "err", err)
-			return
-		}
-
-		for _, chat := range chats {
-			b.telegram.SendMessage(chat, out, &telebot.SendOptions{ParseMode: telebot.ModeHTML})
-		}
-	}
-}
-
 // SendAdminMessage to the admin's ID with a message
 func (b *Bot) SendAdminMessage(adminID int, message string) {
 	b.telegram.SendMessage(telebot.User{ID: adminID}, message, nil)
@@ -235,7 +172,7 @@ func (b *Bot) isAdminID(id int) bool {
 }
 
 // Run the telegram and listen to messages send to the telegram
-func (b *Bot) Run(ctx context.Context) error {
+func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) error {
 	commandSuffix := fmt.Sprintf("@%s", b.telegram.Identity.Username)
 
 	commands := map[string]func(message telebot.Message){
@@ -296,21 +233,73 @@ func (b *Bot) Run(ctx context.Context) error {
 	messages := make(chan telebot.Message, 100)
 	b.telegram.Listen(messages, time.Second)
 
+	var gr run.Group
+	{
+		gr.Add(func() error {
+			return b.sendWebhook(ctx, webhooks)
+		}, func(err error) {
+		})
+	}
+	{
+		gr.Add(func() error {
+			for {
+				select {
+				case <-ctx.Done():
+					return nil
+				case message := <-messages:
+					if err := process(message); err != nil {
+						level.Info(b.logger).Log(
+							"msg", "failed to process message",
+							"err", err,
+							"sender_id", message.Sender.ID,
+							"sender_username", message.Sender.Username,
+						)
+					}
+				}
+			}
+		}, func(err error) {
+		})
+	}
+
+	return gr.Run()
+}
+
+// sendWebhook sends messages received via webhook to all subscribed chats
+func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan notify.WebhookMessage) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case message := <-messages:
-			if err := process(message); err != nil {
-				level.Info(b.logger).Log(
-					"msg", "failed to process message",
-					"err", err,
-					"sender_id", message.Sender.ID,
-					"sender_username", message.Sender.Username,
-				)
+		case w := <-webhooks:
+			chats, err := b.chats.List()
+			if err != nil {
+				level.Error(b.logger).Log("msg", "failed to get chat list from store", "err", err)
+				continue
+			}
+
+			data := &template.Data{
+				Receiver:          w.Receiver,
+				Status:            w.Status,
+				Alerts:            w.Alerts,
+				GroupLabels:       w.GroupLabels,
+				CommonLabels:      w.CommonLabels,
+				CommonAnnotations: w.CommonAnnotations,
+				ExternalURL:       w.ExternalURL,
+			}
+
+			out, err := b.templates.ExecuteHTMLString(`{{ template "telegram.default" . }}`, data)
+			if err != nil {
+				level.Warn(b.logger).Log("msg", "failed to template alerts", "err", err)
+				continue
+			}
+
+			for _, chat := range chats {
+				b.telegram.SendMessage(chat, out, &telebot.SendOptions{ParseMode: telebot.ModeHTML})
 			}
 		}
 	}
+
+	return nil
 }
 
 func (b *Bot) handleStart(message telebot.Message) {
