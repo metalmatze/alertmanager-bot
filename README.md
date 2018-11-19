@@ -133,6 +133,7 @@ alertmanager-bot:
     STORE: bolt
     TELEGRAM_ADMIN: '1234567'
     TELEGRAM_TOKEN: XXX
+    TEMPLATE_PATHS: /templates/default.tmpl
   volumes:
   - /srv/monitoring/alertmanager-bot:/data
 ```
@@ -151,6 +152,7 @@ ENV Variable | Description
 | STORE             | The type of the store to use, choose from bolt (local) or consul (distributed) |
 | TELEGRAM_ADMIN    | The Telegram user id for the admin |
 | TELEGRAM_TOKEN    | Token you get from [@botfather](https://telegram.me/botfather) |
+| TEMPLATE_PATHS    | Path to custom message templates, default template is `./default.tmpl`, in docker - `/templates/default.tmpl` |
 
 #### Authentication
 
