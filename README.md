@@ -133,6 +133,7 @@ alertmanager-bot:
     STORE: bolt
     TELEGRAM_ADMIN: '1234567'
     TELEGRAM_TOKEN: XXX
+    TEMPLATE_PATHS: /templates/default.tmpl
   volumes:
   - /srv/monitoring/alertmanager-bot:/data
 ```
