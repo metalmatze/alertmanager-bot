@@ -1,45 +1,81 @@
+---
+kind: pipeline
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
 workspace:
   base: /go
   path: src/github.com/metalmatze/alertmanager-bot
 
-pipeline:
-  dep:
-    image: metalmatze/dep:0.5.0
-    commands:
-      - dep ensure -v -vendor-only
+steps:
+- name: go
+  pull: default
+  image: golang
+  commands:
+  - go env
 
-  build:
-    image: golang:1.10-alpine
-    pull: true
-    commands:
-      - apk add -U git make
-      - make fmt
-      - make vet
-      - make lint
-      - make test
-      - make build
-    when:
-      event: [ push, tag, pull_request ]
+- name: dep
+  pull: default
+  image: metalmatze/dep:0.5.0
+  commands:
+  - dep ensure -v -vendor-only
 
-  release:
-    image: golang:1.10-alpine
-    commands:
-      - apk add -U git make
-      - make release
-    when:
-      event: tag
+- name: build
+  pull: always
+  image: golang:1.10-alpine
+  commands:
+  - apk add -U git make
+  - make fmt
+  - make vet
+  - make lint
+  - make test
+  - make build
+  when:
+    event:
+    - push
+    - tag
+    - pull_request
 
-  docker:
-    image: plugins/docker
+- name: release
+  pull: default
+  image: golang:1.10-alpine
+  commands:
+  - apk add -U git make
+  - make release
+  when:
+    event:
+    - tag
+
+- name: docker
+  pull: default
+  image: plugins/docker
+  settings:
+    password:
+      from_secret: docker_username
     repo: metalmatze/alertmanager-bot
-    secrets: [ docker_username, docker_password ]
-    tag: [ latest, 0.3, 0.3.1 ]
-    when:
-      event: tag
+    tag:
+    - latest
+    - 0.3
+    - 0.3.1
+    username:
+      from_secret: docker_password
+  when:
+    event:
+    - tag
 
-  github:
-    image: plugins/github-release
-    secrets: [ github_token ]
-    files: dist/*
-    when:
-      event: tag
+- name: github
+  pull: default
+  image: plugins/github-release
+  settings:
+    files: "dist/*"
+  environment:
+    github_token:
+      from_secret: github_token
+  when:
+    event:
+    - tag
+
+...
