@@ -298,8 +298,6 @@ func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan notify.WebhookMes
 			}
 		}
 	}
-
-	return nil
 }
 
 func (b *Bot) handleStart(message telebot.Message) {
