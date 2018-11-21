@@ -11,12 +11,6 @@ workspace:
   path: src/github.com/metalmatze/alertmanager-bot
 
 steps:
-- name: go
-  pull: default
-  image: golang
-  commands:
-  - go env
-
 - name: dep
   pull: default
   image: metalmatze/dep:0.5.0
@@ -25,7 +19,7 @@ steps:
 
 - name: build
   pull: always
-  image: golang:1.10-alpine
+  image: golang:1.11-alpine
   commands:
   - apk add -U git make
   - make fmt
@@ -41,7 +35,7 @@ steps:
 
 - name: release
   pull: default
-  image: golang:1.10-alpine
+  image: golang:1.11-alpine
   commands:
   - apk add -U git make
   - make release
