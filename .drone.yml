@@ -11,12 +11,6 @@ workspace:
   path: src/github.com/metalmatze/alertmanager-bot
 
 steps:
-- name: dep
-  pull: default
-  image: metalmatze/dep:0.5.0
-  commands:
-  - dep ensure -v -vendor-only
-
 - name: build
   pull: always
   image: golang:1.11-alpine
