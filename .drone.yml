@@ -16,11 +16,11 @@ steps:
   image: golang:1.11-alpine
   commands:
   - apk add -U git make
+  - make build
   - make fmt
   - make vet
   - make lint
   - make test
-  - make build
   when:
     event:
     - push
