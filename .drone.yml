@@ -14,6 +14,8 @@ steps:
 - name: build
   pull: always
   image: golang:1.11-alpine
+  environment:
+    GO111MODULE: on
   commands:
   - apk add -U git make
   - make build
