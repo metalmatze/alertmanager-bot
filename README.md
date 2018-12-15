@@ -1,4 +1,5 @@
-# Bot for Prometheus' Alertmanager [![Build Status](https://drone.github.matthiasloibl.com/api/badges/metalmatze/alertmanager-bot/status.svg)](https://drone.github.matthiasloibl.com/metalmatze/alertmanager-bot)
+# Bot for Prometheus' Alertmanager [![Build Status](https://cloud.drone.io/api/badges/metalmatze/alertmanager-bot/status.svg)](https://cloud.drone.io/metalmatze/alertmanager-bot)
+
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/metalmatze/alertmanager-bot.svg?maxAge=604800)](https://hub.docker.com/r/metalmatze/alertmanager-bot)
 [![Go Report Card](https://goreportcard.com/badge/github.com/metalmatze/alertmanager-bot)](https://goreportcard.com/report/github.com/metalmatze/alertmanager-bot)
