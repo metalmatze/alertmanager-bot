@@ -45,6 +45,7 @@ Available commands:
 ` + commandStatus + ` - Print the current status.
 ` + commandAlerts + ` - List all alerts.
 ` + commandSilences + ` - List all silences.
+` + commandChats + ` - List all users and group chats that subscribed.
 `
 )
 

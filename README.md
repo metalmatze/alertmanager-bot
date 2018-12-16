@@ -87,6 +87,7 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 > [/status](#status) - Print the current status.  
 > [/alerts](#alerts) - List all alerts.  
 > [/silences](#silences) - List all silences.  
+> [/chats](#chats) - List all users and group chats that subscribed.
 
 ## Installation
 
