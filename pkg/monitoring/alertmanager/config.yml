@@ -1,0 +1,30 @@
+route:
+  repeat_interval: 2h
+  receiver: email-1
+  routes:
+    - match:
+        alertname: httpd_down
+      receiver: email-1
+
+    - match:
+        alertname: nginx_down
+      receiver: email-2
+
+receivers:
+- name: email-1
+  email_configs:
+  - to: <to-email>
+    from: <from-email>
+    smarthost: <smtp:port>
+    auth_username: "<user-name>"
+    auth_identity: "<user-name>"
+    auth_password: "<user-app-specific-password>"
+
+- name: email-2
+  email_configs:
+  - to: <to-email>
+    from: <from-email>
+    smarthost: <smtp:port>
+    auth_username: "<user-name>"
+    auth_identity: "<user-name>"
+    auth_password: "<user-app-specific-password>"

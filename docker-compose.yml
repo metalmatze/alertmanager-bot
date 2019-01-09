@@ -1,0 +1,13 @@
+alertmanager-bot:
+  image: alertmanager-bot:latest
+  environment:
+    ALERTMANAGER_URL: http://localhost:9093
+    BOLT_PATH: /data/bot.db
+    CONSUL_URL: localhost:8500
+    LISTEN_ADDR: 0.0.0.0:8080
+    STORE: consul
+    TELEGRAM_ADMIN: 789593887
+    TELEGRAM_TOKEN: 715767920:AAHM_dFYTF8Q4FG3gnQjvljKCJx4n1dCWuI
+    TEMPLATE_PATHS: /templates/default.tmpl
+  # volumes:
+  # - /srv/monitoring/alertmanager-bot:/data
