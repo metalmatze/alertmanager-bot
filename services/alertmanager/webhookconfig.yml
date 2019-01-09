@@ -13,6 +13,6 @@ route:
 receivers:
 - name: group_1
   webhook_configs:
-  - url: 'http://localhost:8080'
+  - url: 'http://alertmanager-bot:8080'
     send_resolved: true
       

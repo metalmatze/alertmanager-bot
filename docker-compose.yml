@@ -29,18 +29,18 @@ services:
   #   restart: unless-stopped
   #   networks:
   #     - monitor-net
-    # volumes:
-    # - /srv/monitoring/alertmanager-bot:/data
+  #   # volumes:
+  #   # - /srv/monitoring/alertmanager-bot:/data
 
-  consul-agent:
-    image: consul:latest
-    container_name: consul-agent
-    restart: unless-stopped
-    networks:
-      - monitor-net
-    command: "agent -dev"
-    ports:
-      - 8500:8500
+  # consul-agent:
+  #   image: consul:latest
+  #   container_name: consul-agent
+  #   restart: unless-stopped
+  #   networks:
+  #     - monitor-net
+  #   command: "agent -dev"
+  #   ports:
+  #     - 8500:8500
 
   prometheus:
     image: prom/prometheus:latest
