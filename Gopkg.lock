@@ -29,14 +29,6 @@
   revision = "f0300d1749da6fa982027e449ec0c7a145510c3c"
 
 [[projects]]
-  digest = "1:c47f4964978e211c6e566596ec6246c329912ea92e9bb99c00798bb4564c5b09"
-  name = "github.com/armon/go-radix"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "1a2de0c21c94309923825da3df33a4381872c795"
-  version = "v1.0.0"
-
-[[projects]]
   branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
@@ -269,14 +261,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:61332bb44d05257bbf0356d8400a8b30fe0b9fdc3b72b8b55661da8f0a4f39ae"
-  name = "github.com/mitchellh/hashstructure"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "a38c50148365edc8df43c1580c48fb2b3a1e9cd7"
-  version = "v1.0.0"
-
-[[projects]]
   digest = "1:bba69fe95a60f59a68df402c23d57ffdc5596200901189958aea969c468d550f"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
@@ -358,7 +342,7 @@
   name = "github.com/prometheus/client_model"
   packages = ["go"]
   pruneopts = "UT"
-  revision = "5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f"
+  revision = "f287a105a20ec685d797f65cd0ce8fbeaef42da1"
 
 [[projects]]
   digest = "1:f5230e376231e489365dd86ceea2e5205a42f5ed4ceaab13c4e7f9eb75ceb666"
@@ -411,14 +395,6 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:6a519ce8a4f7e5da2e12c7b47da4711750c085d8e3a6449d046b17eea42069a9"
-  name = "github.com/tucnak/telebot"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "00cebf376d79ee4363a11cd66fbbdf565452e0ab"
-  version = "v1.0"
-
-[[projects]]
   branch = "master"
   digest = "1:d5891c5bca9c62e5d394ca26491d2b710a1dc08cedeb0ca8f9ac4c3305120b02"
   name = "golang.org/x/crypto"
@@ -449,11 +425,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f106a08663d0031b576f61ab81ffd80124da17096eab36aceb25b1b0d847da9a"
+  digest = "1:91137b48dc3eb34409f731b49f63a5ebf73218168a065e1a93af24eb5b2f99e8"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "7fbe1cd0fcc20051e1fcb87fbabec4a1bacaaeba"
+  revision = "48ac38b7c8cbedd50b1613c0fccacfc7d88dfcdf"
 
 [[projects]]
   digest = "1:c06d9e11d955af78ac3bbb26bd02e01d2f61f689e1a3bce2ef6fb683ef8a7f2d"
@@ -462,6 +438,14 @@
   pruneopts = "UT"
   revision = "947dcec5ba9c011838740e680966fd7087a71d0d"
   version = "v2.2.6"
+
+[[projects]]
+  branch = "v2"
+  digest = "1:ccc746bf1fb83d48401351ebe64df3a1aa6e2329859398e469da23088ea1558b"
+  name = "gopkg.in/tucnak/telebot.v2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "430758b3741d5fc59259c3989f929dd16ba663e3"
 
 [[projects]]
   digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
@@ -491,8 +475,8 @@
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/stretchr/testify/assert",
-    "github.com/tucnak/telebot",
     "gopkg.in/alecthomas/kingpin.v2",
+    "gopkg.in/tucnak/telebot.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

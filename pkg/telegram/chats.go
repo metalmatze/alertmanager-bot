@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/docker/libkv/store"
-	"github.com/tucnak/telebot"
+	telebot "gopkg.in/tucnak/telebot.v2"
 )
 
 const telegramChatsDirectory = "telegram/chats"

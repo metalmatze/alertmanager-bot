@@ -300,8 +300,6 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/tent/http-link-go v0.0.0-20130702225549-ac974c61c2f9 h1:/Bsw4C+DEdqPjt8vAqaC9LAqpAQnaCQQqmolqq3S1T4=
 github.com/tent/http-link-go v0.0.0-20130702225549-ac974c61c2f9/go.mod h1:RHkNRtSLfOK7qBTHaeSX1D6BNpI3qw7NTxsmNr4RvN8=
 github.com/tonnerre/golang-text v0.0.0-20130925195846-048ed3d792f7/go.mod h1:J5H/d3ZVtRUjmP4Zf87sPSIUSCGFXorzn3hQtdODORQ=
-github.com/tucnak/telebot v0.0.0-20170912115553-00cebf376d79 h1:KUtYa6jGqnFOOpLMmI4keBw8Ofj/2M075zzGYTl2HkU=
-github.com/tucnak/telebot v0.0.0-20170912115553-00cebf376d79/go.mod h1:TCLoYDyssqVcjhkdyYu+He6eldK40im537vXoex2LM0=
 github.com/vmware/govmomi v0.18.0 h1:f7QxSmP7meCtoAmiKZogvVbLInT+CZx6Px6K5rYsJZo=
 github.com/vmware/govmomi v0.18.0/go.mod h1:URlwyTFZX72RmxtxuaFL2Uj3fD1JTvZdx59bHWk6aFU=
 github.com/vmware/vic v1.4.1 h1:M8hwS40QBjVTWU46qSM+tCAUSMHTTyduCmtj9OPR49A=
