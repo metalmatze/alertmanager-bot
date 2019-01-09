@@ -1,4 +1,4 @@
-# AlertingSystem
+# Alerting System
 
 ## Requirements:
 - Write your own code to create a Chat Bot that follow the description as below.

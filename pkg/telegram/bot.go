@@ -11,13 +11,13 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
-	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/oklog/run"
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tucnak/telebot"
+	"github.com/vu-long/alertmanager-bot/pkg/alertmanager"
 )
 
 const (
