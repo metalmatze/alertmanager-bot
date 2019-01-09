@@ -1,0 +1,5 @@
+*DS_Store
+.vs/
+.vscode/
+.idea/
+alertmanager/config-email.yml

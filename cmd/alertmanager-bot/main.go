@@ -18,14 +18,14 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
-	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
-	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
 	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/vu-long/alertmanager-bot/pkg/alertmanager"
+	"github.com/vu-long/alertmanager-bot/pkg/telegram"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 const (

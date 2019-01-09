@@ -1,5 +1,5 @@
 EXECUTABLE ?= alertmanager-bot
-IMAGE ?= metalmatze/$(EXECUTABLE)
+IMAGE ?= vulong/$(EXECUTABLE)
 GO := CGO_ENABLED=0 go
 DATE := $(shell date -u '+%FT%T%z')
 

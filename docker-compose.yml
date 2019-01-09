@@ -1,0 +1,144 @@
+version: "3"
+
+networks:
+  monitor-net:
+    driver: bridge
+
+volumes:
+    prometheus_data: {}
+    grafana_data: {}
+
+services:
+  # alertmanager-bot:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: alertmanager-bot
+  #   # image: alertmanager-bot:latest
+  #   environment:
+  #     ALERTMANAGER_URL: http://alertmanager:9093
+  #     BOLT_PATH: /data/bot.db
+  #     CONSUL_URL: consul-agent:8500
+  #     LISTEN_ADDR: 0.0.0.0:8080
+  #     STORE: consul
+  #     TELEGRAM_ADMIN: 789593887
+  #     TELEGRAM_TOKEN: 715767920:AAHM_dFYTF8Q4FG3gnQjvljKCJx4n1dCWuI
+  #     TEMPLATE_PATHS: /templates/default.tmpl
+  #   ports:
+  #     - 8080:8080
+  #   restart: unless-stopped
+  #   networks:
+  #     - monitor-net
+  #   # volumes:
+  #   # - /srv/monitoring/alertmanager-bot:/data
+
+  # consul-agent:
+  #   image: consul:latest
+  #   container_name: consul-agent
+  #   restart: unless-stopped
+  #   networks:
+  #     - monitor-net
+  #   command: "agent -dev"
+  #   ports:
+  #     - 8500:8500
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./services/prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    expose:
+      - 9090
+    ports:
+      - "9090:9090"
+    networks:
+      - monitor-net
+  
+  # nodeexporter:
+  #   image: prom/node-exporter:latest
+  #   container_name: nodeexporter
+  #   user: root
+  #   privileged: true
+  #   volumes:
+  #     - /proc:/host/proc:ro
+  #     - /sys:/host/sys:ro
+  #     - /:/rootfs:ro
+  #   command:
+  #     - '--path.procfs=/host/proc'
+  #     - '--path.sysfs=/host/sys'
+  #     - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+  #   restart: unless-stopped
+  #   expose:
+  #     - 9100
+  #   networks:
+  #     - monitor-net
+  
+  alertmanager:
+   image: prom/alertmanager
+   container_name: alertmanager
+   volumes: 
+     - ./services/alertmanager/:/etc/alertmanager/
+   command:
+     - '--config.file=/etc/alertmanager/webhookconfig.yml'
+     - '--storage.path=/alertmanager'
+     - '--web.listen-address=0.0.0.0:9093'
+   restart: unless-stopped
+   ports:
+     - "9093:9093"
+   networks:
+     - monitor-net
+
+  blackbox-exporter:
+   image: prom/blackbox-exporter
+   container_name: blackbox
+   restart: unless-stopped
+   ports:
+     - "9115:9115"
+   networks:
+     - monitor-net
+
+  grafana:
+   image: grafana/grafana:latest
+   container_name: grafana
+   volumes:
+     - grafana_data:/var/lib/grafana
+     - ./services/grafana/datasources:/etc/grafana/datasources
+     - ./services/grafana/dashboards:/etc/grafana/dashboards
+     - ./services/grafana/setup.sh:/setup.sh
+   entrypoint: /setup.sh
+   environment:
+     - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+     - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+     - GF_USERS_ALLOW_SIGN_UP=false
+   restart: unless-stopped
+   expose:
+     - 3000
+   ports:
+     - 3000:3000
+   networks:
+     - monitor-net
+  
+  httpd:
+    image: httpd
+    ports:
+     - "5000:80"
+    container_name: "httpd"
+    networks:
+     - monitor-net
+
+  nginx:
+    image: nginx
+    ports:
+     - "5001:80"
+    container_name: "nginx"
+    networks:
+     - monitor-net
