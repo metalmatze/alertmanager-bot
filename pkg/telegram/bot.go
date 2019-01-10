@@ -78,11 +78,22 @@ type BotOption func(b *Bot)
 
 // NewBot creates a Bot with the UserStore and telegram telegram
 func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bot, error) {
-	var pref telebot.Settings
-	var poller telebot.Poller
-	pref.Token = token
-	pref.Poller = poller
-	bot, err := telebot.NewBot(pref)
+	poller := &telebot.LongPoller{Timeout: 1 * time.Second}
+	spamProtected := telebot.NewMiddlewarePoller(poller, func(upd *telebot.Update) bool {
+		if upd.Message == nil {
+			return true
+		}
+
+		if strings.Contains(upd.Message.Text, "spam") {
+			return false
+		}
+
+		return true
+	})
+	bot, err := telebot.NewBot(telebot.Settings{
+		Token:  token,
+		Poller: spamProtected,
+	})
 	if err != nil {
 		return nil, err
 	}
