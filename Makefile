@@ -8,6 +8,12 @@ LDFLAGS += -X main.Revision=$(DRONE_COMMIT)
 LDFLAGS += -X "main.BuildDate=$(DATE)"
 LDFLAGS += -extldflags '-static'
 
+SWAGGER = docker run \
+	--user=$(shell id -u $(USER)):$(shell id -g $(USER)) \
+	--rm \
+	-v $(shell pwd):/go/src/github.com/prometheus/alertmanager \
+	-w /go/src/github.com/prometheus/alertmanager quay.io/goswagger/swagger:v0.18.0
+
 PACKAGES = $(shell go list ./... | grep -v /vendor/)
 
 .PHONY: all
@@ -47,3 +53,8 @@ release:
 		$(GO) get -u github.com/mitchellh/gox; \
 	fi
 	CGO_ENABLED=0 gox -arch="386 amd64 arm" -verbose -ldflags '-w $(LDFLAGS)' -output="dist/$(EXECUTABLE)-${DRONE_TAG}-{{.OS}}-{{.Arch}}" ./cmd/alertmanager-bot/
+
+.PHONY: apiv2
+apiv2: pkg/alertmanager/api/v2/openapi.yaml
+	-rm -rf pkg/alertmanager/api/v2/{client,models}
+	$(SWAGGER) generate client -f pkg/alertmanager/api/v2/openapi.yaml -A alertmanager --target pkg/alertmanager/api/v2/

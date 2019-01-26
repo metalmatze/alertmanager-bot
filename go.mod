@@ -26,6 +26,11 @@ require (
 	github.com/go-kit/kit v0.8.0
 	github.com/go-logfmt/logfmt v0.3.0 // indirect
 	github.com/go-ole/go-ole v1.2.0 // indirect
+	github.com/go-openapi/errors v0.17.2
+	github.com/go-openapi/runtime v0.18.0
+	github.com/go-openapi/strfmt v0.18.0
+	github.com/go-openapi/swag v0.18.0
+	github.com/go-openapi/validate v0.18.0
 	github.com/go-stack/stack v1.6.0 // indirect
 	github.com/gogo/googleapis v1.1.0 // indirect
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
@@ -64,7 +69,6 @@ require (
 	github.com/mitchellh/copystructure v0.0.0-20170525013902-d23ffcb85de3 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/hashstructure v0.0.0-20170609045927-2bca23e0e452 // indirect
-	github.com/mitchellh/mapstructure v0.0.0-20170523030023-d0303fe80992 // indirect
 	github.com/mitchellh/reflectwalk v0.0.0-20170726202117-63d60e9d0dbc // indirect
 	github.com/oklog/run v1.0.0
 	github.com/oklog/ulid v1.3.1 // indirect
