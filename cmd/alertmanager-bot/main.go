@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	stdlog "log"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,9 +17,12 @@ import (
 	"github.com/docker/libkv/store/consul"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	transport "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/strfmt"
 	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
+	apiclient "github.com/metalmatze/alertmanager-bot/pkg/alertmanager/api/v2/client"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
 	"github.com/prometheus/alertmanager/notify"
@@ -197,6 +201,32 @@ func main() {
 		if err != nil {
 			level.Error(logger).Log("msg", "failed to create chat store", "err", err)
 			os.Exit(1)
+		}
+
+		client := transport.New(
+			config.alertmanager.Host,
+			config.alertmanager.Path+"/api/v2/",
+			[]string{config.alertmanager.Scheme},
+		)
+
+		// TODO: OpenAPI spec of Alertmanager doesn't supoport auth yet
+		//var auth apiruntime.ClientAuthInfoWriter
+		//if password, set := config.alertmanager.User.Password(); set {
+		//	auth = transport.BasicAuth(
+		//		config.alertmanager.User.Username(),
+		//		password,
+		//	)
+		//}
+
+		alertmanagerAPI := apiclient.New(client, strfmt.Default)
+
+		alerts, err := alertmanagerAPI.Alert.GetAlerts(nil)
+		if err != nil {
+			stdlog.Fatal(err)
+		}
+
+		for _, alert := range alerts.Payload {
+			fmt.Printf("%+v\n", alert)
 		}
 
 		bot, err := telegram.NewBot(
