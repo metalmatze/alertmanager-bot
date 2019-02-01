@@ -162,7 +162,9 @@ Additional users may be allowed to command the bot by giving multiple instances
 of the `--telegram.admin` command line option or by specifying a
 newline-separated list of telegram user IDs in the `TELEGRAM_ADMIN` environment
 variable.
-
+```
+- TELEGRAM_ADMIN="**********\n************"
+```
 #### Alertmanager Configuration 
 
 Now you need to connect the Alertmanager to send alerts to the bot.  
