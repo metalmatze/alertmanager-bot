@@ -164,6 +164,7 @@ newline-separated list of telegram user IDs in the `TELEGRAM_ADMIN` environment
 variable.
 ```
 - TELEGRAM_ADMIN="**********\n************"
+--telegram.admin=1 --telegram.admin=2
 ```
 #### Alertmanager Configuration 
 
