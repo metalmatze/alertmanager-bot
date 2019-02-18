@@ -295,10 +295,10 @@ func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan notify.WebhookMes
 			}
 
 			for _, chat := range chats {
-				err = b.telegram.SendMessage(chat, b.truncateMessage(out), &telebot.SendOptions{ParseMode: telebot.ModeHTML})
+				err =  b.telegram.SendMessage(chat, b.truncateMessage(out), &telebot.SendOptions{ParseMode: telebot.ModeHTML})
 				if err != nil {
-          level.Warn(b.logger).Log("msg", "failed to send message to subscribed chat", "err", err)
-        }
+					level.Warn(b.logger).Log("msg", "failed to send message to subscribed chat", "err", err)
+				}
 			}
 		}
 	}
@@ -438,19 +438,19 @@ func (b *Bot) tmplAlerts(alerts ...*types.Alert) (string, error) {
 	return out, nil
 }
 
-// truncateMessage very big massage
+// Truncate very big message
 func (b *Bot) truncateMessage(str string) string {
 	truncateMsg := str
 	if len(str) > 4095 {  // telegram API can only support 4096 bytes per message
-	  level.Warn(b.logger).Log("msg", "is bigger than 4095, truncate...")
-    // find the end of last alert we do not want break the html tags
-    i := strings.LastIndex(str[0:4080], "\n\n") // 4080 + "\n<b>[SNIP]</b>" == 4095
-    if i > 1 {
-		  truncateMsg = str[0:i] + "\n<b>[SNIP]</b>"
-    } else {
-      truncateMsg = "Massage is to long... can't send.."
-      level.Warn(b.logger).Log("msg", "truncateMessage: Unable to find the end of last alert.")
-    }
+		level.Warn(b.logger).Log("msg", "Message is bigger than 4095, truncate...")
+		// find the end of last alert, we do not want break the html tags
+		i := strings.LastIndex(str[0:4080], "\n\n") // 4080 + "\n<b>[SNIP]</b>" == 4095
+		if i > 1 {
+			truncateMsg = str[0:i] + "\n<b>[SNIP]</b>"
+		} else {
+			truncateMsg = "Message is too long... can't send.."
+			level.Warn(b.logger).Log("msg", "truncateMessage: Unable to find the end of last alert.")
+		}
 		return truncateMsg
 	}
 	return truncateMsg
