@@ -38,7 +38,7 @@ require (
 	github.com/hashicorp/go-memdb v0.0.0-20171005030753-75ff99613d28 // indirect
 	github.com/hashicorp/go-msgpack v0.0.0-20150518234257-fa3f63826f7c // indirect
 	github.com/hashicorp/go-retryablehttp v0.0.0-20170824180859-794af36148bf // indirect
-	github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90 // indirect
+	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
 	github.com/hashicorp/go-sockaddr v0.0.0-20170627023441-41949a141473 // indirect
 	github.com/hashicorp/go-syslog v0.0.0-20170829120034-326bf4a7f709 // indirect
 	github.com/hashicorp/go-uuid v0.0.0-20160717022140-64130c7a86d7 // indirect
@@ -62,6 +62,7 @@ require (
 	github.com/miekg/dns v0.0.0-20171013160401-f218fef126d8 // indirect
 	github.com/mitchellh/cli v0.0.0-20170908181043-65fcae5817c8 // indirect
 	github.com/mitchellh/copystructure v0.0.0-20170525013902-d23ffcb85de3 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/hashstructure v0.0.0-20170609045927-2bca23e0e452 // indirect
 	github.com/mitchellh/mapstructure v0.0.0-20170523030023-d0303fe80992 // indirect
