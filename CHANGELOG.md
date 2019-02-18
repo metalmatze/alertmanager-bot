@@ -1,3 +1,8 @@
+## 0.4.0 / 2019-02-19
+
+* [FEATURE] Add ability to use templates for Telegram messages [#32](https://github.com/metalmatze/alertmanager-bot/pull/32).
+* [ENHANCEMENT] Truncate too large messages [#52](https://github.com/metalmatze/alertmanager-bot/pull/52), thanks @BulatSaif.
+
 ## 0.3.1 / 2018-06-11
 
 * [BUGFIX] Escape emojis in messages [#22](https://github.com/metalmatze/alertmanager-bot/pull/22), thanks @caarlos0.

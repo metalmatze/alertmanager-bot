@@ -48,8 +48,8 @@ steps:
     repo: metalmatze/alertmanager-bot
     tag:
     - latest
-    - 0.3
-    - 0.3.1
+    - 0.4
+    - 0.4.0
     username:
       from_secret: docker_password
   when:
