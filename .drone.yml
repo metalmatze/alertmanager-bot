@@ -32,6 +32,8 @@ steps:
 - name: release
   pull: default
   image: golang:1.11-alpine
+  environment:
+    GO111MODULE: on
   commands:
   - apk add -U git make
   - make release
