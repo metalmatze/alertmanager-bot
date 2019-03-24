@@ -5,20 +5,20 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/metalmatze/alertmanager-bot)](https://goreportcard.com/report/github.com/metalmatze/alertmanager-bot)
 
 
-This is the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) bot for 
-[Prometheus](https://prometheus.io/) that notifies you on alerts.  
+This is the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) bot for
+[Prometheus](https://prometheus.io/) that notifies you on alerts.
 Just configure the Alertmanager to send Webhooks to the bot and that's it.
 
 Additionally you can always **send commands** to get up-to-date information from the alertmanager.
 
 ### Why?
 
-Alertmanager already integrates a lot of different messengers as receivers for alerts.  
+Alertmanager already integrates a lot of different messengers as receivers for alerts.
 I want to extend this basic functionality.
 
-Previously the Alertmanager could only talk to you via a chat, but now you can talk back via [commands](#commands).  
-You can ask about current ongoing [alerts](#alerts) and [silences](#silences).  
-In the future I plan to also support silencing via the chat, so you can silences after getting an alert from within the chat.  
+Previously the Alertmanager could only talk to you via a chat, but now you can talk back via [commands](#commands).
+You can ask about current ongoing [alerts](#alerts) and [silences](#silences).
+In the future I plan to also support silencing via the chat, so you can silences after getting an alert from within the chat.
 A lot of other things can be added!
 
 ## Messengers
@@ -29,21 +29,21 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 
 ###### /start
 
-> Hey, Matthias! I will now keep you up to date!  
+> Hey, Matthias! I will now keep you up to date!
 > [/help](#help)
 
 ###### /stop
 
-> Alright, Matthias! I won't talk to you again.  
+> Alright, Matthias! I won't talk to you again.
 > [/help](#help)
 
 ###### /alerts
 
-> 🔥 **FIRING** 🔥  
-> **NodeDown** (Node scraper.krautreporter:8080 down)  
-> scraper.krautreporter:8080 has been down for more than 1 minute.  
-> **Started**: 1 week 2 days 3 hours 50 minutes 42 seconds ago  
-> 
+> 🔥 **FIRING** 🔥
+> **NodeDown** (Node scraper.krautreporter:8080 down)
+> scraper.krautreporter:8080 has been down for more than 1 minute.
+> **Started**: 1 week 2 days 3 hours 50 minutes 42 seconds ago
+>
 > 🔥 **FIRING** 🔥
 > **monitored_service_down** (MONITORED SERVICE DOWN)
 > The monitoring service 'digitalocean-exporter' is down.
@@ -51,15 +51,15 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 
 ###### /silences
 
-> NodeDown 🔕  
->  `job="ranch-eye" monitor="exporter-metrics" severity="page"`  
-> **Started**: 1 month 1 week 5 days 8 hours 27 minutes 57 seconds ago  
-> **Ends**: -11 months 2 weeks 2 days 19 hours 15 minutes 24 seconds  
-> 
-> RancherServiceState 🔕  
->  `job="rancher" monitor="exporter-metrics" name="scraper" rancherURL="http://rancher.example.com/v1" severity="page" state="inactive"`  
-> **Started**: 1 week 2 days 3 hours 46 minutes 21 seconds ago  
-> **Ends**: -3 weeks 1 day 13 minutes 24 seconds  
+> NodeDown 🔕
+>  `job="ranch-eye" monitor="exporter-metrics" severity="page"`
+> **Started**: 1 month 1 week 5 days 8 hours 27 minutes 57 seconds ago
+> **Ends**: -11 months 2 weeks 2 days 19 hours 15 minutes 24 seconds
+>
+> RancherServiceState 🔕
+>  `job="rancher" monitor="exporter-metrics" name="scraper" rancherURL="http://rancher.example.com/v1" severity="page" state="inactive"`
+> **Started**: 1 week 2 days 3 hours 46 minutes 21 seconds ago
+> **Ends**: -3 weeks 1 day 13 minutes 24 seconds
 
 ###### /chats
 
@@ -69,24 +69,24 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 
 ###### /status
 
-> **AlertManager**  
-> Version: 0.5.1  
-> Uptime: 3 weeks 1 day 6 hours 15 minutes 2 seconds  
-> **AlertManager Bot**  
-> Version: 0.4.0  
-> Uptime: 3 weeks 1 hour 17 minutes 19 seconds  
+> **AlertManager**
+> Version: 0.5.1
+> Uptime: 3 weeks 1 day 6 hours 15 minutes 2 seconds
+> **AlertManager Bot**
+> Version: 0.4.0
+> Uptime: 3 weeks 1 hour 17 minutes 19 seconds
 
 ###### /help
 
-> I'm a Prometheus AlertManager Bot for Telegram. I will notify you about alerts.  
-> You can also ask me about my [/status](#status), [/alerts](#alerts) & [/silences](#silences)  
->   
-> Available commands:  
-> [/start](#start) - Subscribe for alerts.  
-> [/stop](#stop) - Unsubscribe for alerts.  
-> [/status](#status) - Print the current status.  
-> [/alerts](#alerts) - List all alerts.  
-> [/silences](#silences) - List all silences.  
+> I'm a Prometheus AlertManager Bot for Telegram. I will notify you about alerts.
+> You can also ask me about my [/status](#status), [/alerts](#alerts) & [/silences](#silences)
+>
+> Available commands:
+> [/start](#start) - Subscribe for alerts.
+> [/stop](#stop) - Unsubscribe for alerts.
+> [/status](#status) - Print the current status.
+> [/alerts](#alerts) - List all alerts.
+> [/silences](#silences) - List all silences.
 > [/chats](#chats) - List all users and group chats that subscribed.
 
 ## Installation
@@ -166,9 +166,9 @@ variable.
 - TELEGRAM_ADMIN="**********\n************"
 --telegram.admin=1 --telegram.admin=2
 ```
-#### Alertmanager Configuration 
+#### Alertmanager Configuration
 
-Now you need to connect the Alertmanager to send alerts to the bot.  
+Now you need to connect the Alertmanager to send alerts to the bot.
 A webhook is used for that, so make sure your `LISTEN_ADDR` is reachable for the Alertmanager.
 
 For example add this to your `alertmanager.yml` configuration:
@@ -182,7 +182,7 @@ receivers:
 
 ## Development
 
-Get all dependencies. We use [golang/dep](https://github.com/golang/dep).  
+Get all dependencies. We use [golang/dep](https://github.com/golang/dep).
 Fetch all dependencies with:
 
 ```
@@ -205,8 +205,8 @@ alertmanager-bot
 
 ##### Commands
 
-* `/silence` - show a specific silence  
-* `/silence_del` - delete a silence by command  
+* `/silence` - show a specific silence
+* `/silence_del` - delete a silence by command
 * `/silence_add` - add a silence for a alert by command
 
 ##### More Messengers
