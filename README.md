@@ -141,7 +141,7 @@ alertmanager-bot:
 ```
 ### Build from source
 
-`go get github.com/metalmatze/alertmanager-bot`
+`GO111MODULE=on go get github.com/metalmatze/alertmanager-bot/cmd/alertmanager-bot`
 
 ### Configuration
 
