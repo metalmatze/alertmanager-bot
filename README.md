@@ -139,6 +139,11 @@ alertmanager-bot:
   volumes:
   - /srv/monitoring/alertmanager-bot:/data
 ```
+
+### Ansible
+
+If you prefer using configuration management systems (like Ansible) you might be interested in the following role:  [mbaran0v.alertmanager-bot](https://github.com/mbaran0v/ansible-role-alertmanager-bot)
+
 ### Build from source
 
 `GO111MODULE=on go get github.com/metalmatze/alertmanager-bot/cmd/alertmanager-bot`
