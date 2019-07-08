@@ -76,7 +76,7 @@ func SilenceMessage(s types.Silence) string {
 	)
 }
 
-// Resolved returns if a silence is reolved by EndsAt
+// Resolved returns if a silence is resolved by EndsAt
 func Resolved(s types.Silence) bool {
 	if s.EndsAt.IsZero() {
 		return false
