@@ -16,6 +16,7 @@ steps:
   image: golang:1.11-alpine
   environment:
     GO111MODULE: on
+    GOPROXY: https://proxy.golang.org
   commands:
   - apk add -U git make
   - make build
@@ -34,6 +35,7 @@ steps:
   image: golang:1.11-alpine
   environment:
     GO111MODULE: on
+    GOPROXY: https://proxy.golang.org
   commands:
   - apk add -U git make
   - make release
