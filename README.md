@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/metalmatze/alertmanager-bot)](https://goreportcard.com/report/github.com/metalmatze/alertmanager-bot)
 
 
-This is the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) bot for 
+This is the [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) bot for
 [Prometheus](https://prometheus.io/) that notifies you on alerts.  
 Just configure the Alertmanager to send Webhooks to the bot and that's it.
 
@@ -43,7 +43,7 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 > **NodeDown** (Node scraper.krautreporter:8080 down)  
 > scraper.krautreporter:8080 has been down for more than 1 minute.  
 > **Started**: 1 week 2 days 3 hours 50 minutes 42 seconds ago  
-> 
+>
 > 🔥 **FIRING** 🔥
 > **monitored_service_down** (MONITORED SERVICE DOWN)
 > The monitoring service 'digitalocean-exporter' is down.
@@ -55,7 +55,7 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 >  `job="ranch-eye" monitor="exporter-metrics" severity="page"`  
 > **Started**: 1 month 1 week 5 days 8 hours 27 minutes 57 seconds ago  
 > **Ends**: -11 months 2 weeks 2 days 19 hours 15 minutes 24 seconds  
-> 
+>
 > RancherServiceState 🔕  
 >  `job="rancher" monitor="exporter-metrics" name="scraper" rancherURL="http://rancher.example.com/v1" severity="page" state="inactive"`  
 > **Started**: 1 week 2 days 3 hours 46 minutes 21 seconds ago  
@@ -106,9 +106,9 @@ docker run -d \
 	-e 'STORE=bolt' \
 	-e 'TELEGRAM_ADMIN=1234567' \
 	-e 'TELEGRAM_TOKEN=XXX' \
-	-v '/srv/monitoring/alertmanager-bot:/data'
+	-v '/srv/monitoring/alertmanager-bot:/data' \
 	--name alertmanager-bot \
-	alertmanager-bot:0.4.0
+	metalmatze/alertmanager-bot:0.4.0
 ```
 
 #### Consul Storage
@@ -121,7 +121,7 @@ docker run -d \
 	-e 'TELEGRAM_ADMIN=1234567' \
 	-e 'TELEGRAM_TOKEN=XXX' \
 	--name alertmanager-bot \
-	alertmanager-bot:0.4.0
+	metalmatze/alertmanager-bot:0.4.0
 ```
 
 Usage within docker-compose:
@@ -171,7 +171,7 @@ variable.
 - TELEGRAM_ADMIN="**********\n************"
 --telegram.admin=1 --telegram.admin=2
 ```
-#### Alertmanager Configuration 
+#### Alertmanager Configuration
 
 Now you need to connect the Alertmanager to send alerts to the bot.  
 A webhook is used for that, so make sure your `LISTEN_ADDR` is reachable for the Alertmanager.
