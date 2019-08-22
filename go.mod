@@ -37,6 +37,7 @@ require (
 	github.com/hpcloud/tail v1.0.0 // indirect
 	github.com/joho/godotenv v1.3.0
 	github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/miekg/dns v0.0.0-20171013160401-f218fef126d8 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -65,11 +66,10 @@ require (
 	google.golang.org/appengine v1.1.0 // indirect
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.1 // indirect
-	labix.org/v2/mgo v0.0.0-20140701140051-000000000287 // indirect
-	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
