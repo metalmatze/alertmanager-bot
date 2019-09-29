@@ -25,6 +25,7 @@ import (
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/tucnak/telebot"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -65,6 +66,7 @@ func main() {
 		telegramAdmins []int
 		telegramToken  string
 		templatesPaths []string
+		parseMode      string
 	}{}
 
 	a := kingpin.New("alertmanager-bot", "Bot for Prometheus' Alertmanager")
@@ -116,6 +118,11 @@ func main() {
 		Envar("TEMPLATE_PATHS").
 		Default("/templates/default.tmpl").
 		ExistingFilesVar(&config.templatesPaths)
+
+	a.Flag("parse.mode", "The template formatting mode HTML/Markdown").
+		Envar("TEMPLATE_FORMAT").
+		Default(string(telebot.ModeHTML)).
+		EnumVar(&config.parseMode, string(telebot.ModeHTML), string(telebot.ModeMarkdown))
 
 	_, err := a.Parse(os.Args[1:])
 	if err != nil {
@@ -208,6 +215,7 @@ func main() {
 			telegram.WithRevision(Revision),
 			telegram.WithStartTime(StartTime),
 			telegram.WithExtraAdmins(config.telegramAdmins[1:]...),
+			telegram.WithParseMode(config.parseMode),
 		)
 		if err != nil {
 			level.Error(tlogger).Log("msg", "failed to create bot", "err", err)

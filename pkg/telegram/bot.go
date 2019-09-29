@@ -66,6 +66,7 @@ type Bot struct {
 	logger       log.Logger
 	revision     string
 	startTime    time.Time
+	parseMode    telebot.ParseMode
 
 	telegram *telebot.Bot
 
@@ -100,6 +101,7 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 		admins:          []int{admin},
 		alertmanager:    &url.URL{Host: "localhost:9093"},
 		commandsCounter: commandsCounter,
+		parseMode:       telebot.ModeDefault,
 		// TODO: initialize templates with default?
 	}
 
@@ -158,6 +160,13 @@ func WithExtraAdmins(ids ...int) BotOption {
 	return func(b *Bot) {
 		b.admins = append(b.admins, ids...)
 		sort.Ints(b.admins)
+	}
+}
+
+// WithParseMode sets the alerts parsing mode (HTML/MarkDown)
+func WithParseMode(pm string) BotOption {
+	return func(b *Bot) {
+		b.parseMode = telebot.ParseMode(pm)
 	}
 }
 
@@ -288,14 +297,19 @@ func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan notify.WebhookMes
 				ExternalURL:       w.ExternalURL,
 			}
 
-			out, err := b.templates.ExecuteHTMLString(`{{ template "telegram.default" . }}`, data)
+			out := ""
+			if b.parseMode == telebot.ModeMarkdown {
+				out, err = b.templates.ExecuteTextString(`{{ template "telegram.default" . }}`, data)
+			} else {
+				out, err = b.templates.ExecuteHTMLString(`{{ template "telegram.default" . }}`, data)
+			}
 			if err != nil {
 				level.Warn(b.logger).Log("msg", "failed to template alerts", "err", err)
 				continue
 			}
 
 			for _, chat := range chats {
-				err = b.telegram.SendMessage(chat, b.truncateMessage(out), &telebot.SendOptions{ParseMode: telebot.ModeHTML})
+				err = b.telegram.SendMessage(chat, b.truncateMessage(out), &telebot.SendOptions{ParseMode: b.parseMode})
 				if err != nil {
 					level.Warn(b.logger).Log("msg", "failed to send message to subscribed chat", "err", err)
 				}
