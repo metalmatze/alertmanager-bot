@@ -1,0 +1,6 @@
+# Ignore everything
+*
+
+# Except the default template and the binary
+!default.tmpl
+!alertmanager-bot
