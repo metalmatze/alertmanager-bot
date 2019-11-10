@@ -20,7 +20,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
-	"github.com/prometheus/alertmanager/notify"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -185,8 +184,8 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// TODO Needs fan out for multiple bots
-	webhooks := make(chan notify.WebhookMessage, 32)
+	//// TODO Needs fan out for multiple bots
+	//webhooks := make(chan notify.WebhookMessage, 32)
 
 	var g run.Group
 	{
@@ -223,7 +222,7 @@ func main() {
 			)
 
 			// Runs the bot itself communicating with Telegram
-			return bot.Run(ctx, webhooks)
+			return bot.Run(ctx)
 		}, func(err error) {
 			cancel()
 		})
@@ -245,7 +244,7 @@ func main() {
 		prometheus.MustRegister(webhooksCounter)
 
 		m := http.NewServeMux()
-		m.HandleFunc("/", alertmanager.HandleWebhook(wlogger, webhooksCounter, webhooks))
+		//m.HandleFunc("/", alertmanager.HandleWebhook(wlogger, webhooksCounter, webhooks))
 		m.Handle("/metrics", promhttp.Handler())
 		m.HandleFunc("/health", handleHealth)
 		m.HandleFunc("/healthz", handleHealth)
