@@ -18,7 +18,6 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
-	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
 	"github.com/prometheus/alertmanager/notify"

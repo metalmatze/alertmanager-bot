@@ -1,44 +1,13 @@
 package alertmanager
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"sort"
 	"strings"
 	"time"
 
-	"github.com/go-kit/kit/log"
 	"github.com/hako/durafmt"
 	"github.com/prometheus/alertmanager/types"
 )
-
-type silencesResponse struct {
-	Data   []types.Silence `json:"data"`
-	Status string          `json:"status"`
-}
-
-// ListSilences returns a slice of Silence and an error.
-func ListSilences(logger log.Logger, alertmanagerURL string) ([]types.Silence, error) {
-	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/silences")
-	if err != nil {
-		return nil, err
-	}
-
-	var silencesResponse silencesResponse
-	dec := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
-	if err := dec.Decode(&silencesResponse); err != nil {
-		return nil, err
-	}
-
-	silences := silencesResponse.Data
-	sort.Slice(silences, func(i, j int) bool {
-		return silences[i].EndsAt.After(silences[j].EndsAt)
-	})
-
-	return silences, err
-}
 
 // SilenceMessage converts a silences to a message string
 func SilenceMessage(s types.Silence) string {
