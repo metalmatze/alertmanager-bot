@@ -202,7 +202,6 @@ func main() {
 		bot, err := telegram.NewBot(
 			chats, config.telegramToken, config.telegramAdmins[0],
 			telegram.WithLogger(tlogger),
-			telegram.WithAddr(config.listenAddr),
 			telegram.WithAlertmanager(config.alertmanager),
 			telegram.WithTemplates(tmpl),
 			telegram.WithRevision(Revision),

@@ -81,9 +81,11 @@ require (
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.2.2
 	github.com/tonnerre/golang-text v0.0.0-20130925195846-048ed3d792f7 // indirect
-	github.com/tucnak/telebot v0.0.0-20170912115553-00cebf376d79
+	github.com/tucnak/telebot v0.0.0-20171211233005-62ac17dbc991
 	github.com/weaveworks/mesh v0.0.0-20160126163632-f74318fb713b // indirect
 	golang.org/x/net v0.0.0-20181213202711-891ebc4b82d6 // indirect
 	google.golang.org/grpc v1.17.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
+
+go 1.13

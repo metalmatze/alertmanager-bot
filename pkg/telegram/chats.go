@@ -21,15 +21,15 @@ func NewChatStore(kv store.Store) (*ChatStore, error) {
 }
 
 // List all chats saved in the kv backend
-func (s *ChatStore) List() ([]telebot.Chat, error) {
+func (s *ChatStore) List() ([]*telebot.Chat, error) {
 	kvPairs, err := s.kv.List(telegramChatsDirectory)
 	if err != nil {
 		return nil, err
 	}
 
-	var chats []telebot.Chat
+	var chats []*telebot.Chat
 	for _, kv := range kvPairs {
-		var c telebot.Chat
+		var c *telebot.Chat
 		if err := json.Unmarshal(kv.Value, &c); err != nil {
 			return nil, err
 		}
@@ -40,7 +40,7 @@ func (s *ChatStore) List() ([]telebot.Chat, error) {
 }
 
 // Add a telegram chat to the kv backend
-func (s *ChatStore) Add(c telebot.Chat) error {
+func (s *ChatStore) Add(c *telebot.Chat) error {
 	b, err := json.Marshal(c)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (s *ChatStore) Add(c telebot.Chat) error {
 }
 
 // Remove a telegram chat from the kv backend
-func (s *ChatStore) Remove(c telebot.Chat) error {
+func (s *ChatStore) Remove(c *telebot.Chat) error {
 	key := fmt.Sprintf("%s/%d", telegramChatsDirectory, c.ID)
 	return s.kv.Delete(key)
 }
