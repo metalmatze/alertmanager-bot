@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-bot-configmap
+data:
+  ALERTMANAGER_URL: http://monitoring-prometheus-oper-alertmanager.monitoring.svc.cluster.local:9093 #Alertmanager's DNS. Using internal kubernetes here
+  BOLT_PATH: /data/chat.db
+  STORE: bolt
+  LISTEN_ADDR: 0.0.0.0:8080
+  TELEGRAM_ADMIN: "XXXXX" #It will fail to start with anything other than numbers. Put some random number then get your ID from interacting with the bot. It will log the ID as unauthorized
+  TEMPLATE_PATHS: /templates/default.tmpl

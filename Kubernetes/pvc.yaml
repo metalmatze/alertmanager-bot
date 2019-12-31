@@ -1,0 +1,15 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: amdata-pvc
+  annotations:
+    #volume.beta.kubernetes.io/storage-class: 
+  labels:
+    app: alertmanager-bot
+spec:
+  # storageClassName: <BACKEND_SC_NAME>
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
