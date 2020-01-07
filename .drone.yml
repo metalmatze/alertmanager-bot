@@ -13,7 +13,7 @@ workspace:
 steps:
 - name: build
   pull: always
-  image: golang:1.11-alpine
+  image: golang:1.13-alpine
   environment:
     GO111MODULE: on
     GOPROXY: https://proxy.golang.org
@@ -32,7 +32,7 @@ steps:
 
 - name: release
   pull: default
-  image: golang:1.11-alpine
+  image: golang:1.13-alpine
   environment:
     GO111MODULE: on
     GOPROXY: https://proxy.golang.org
