@@ -55,7 +55,7 @@ steps:
     tag:
     - latest
     - 0.4
-    - 0.4.0
+    - 0.4.1
   when:
     event:
     - tag
