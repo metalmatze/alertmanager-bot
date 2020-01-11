@@ -71,7 +71,6 @@ func main() {
 	a.HelpFlag.Short('h')
 
 	a.Flag("alertmanager.url", "The URL that's used to connect to the alertmanager").
-		Required().
 		Envar("ALERTMANAGER_URL").
 		Default("http://localhost:9093/").
 		URLVar(&config.alertmanager)
@@ -87,7 +86,6 @@ func main() {
 		URLVar(&config.consul)
 
 	a.Flag("listen.addr", "The address the alertmanager-bot listens on for incoming webhooks").
-		Required().
 		Envar("LISTEN_ADDR").
 		Default("0.0.0.0:8080").
 		StringVar(&config.listenAddr)
