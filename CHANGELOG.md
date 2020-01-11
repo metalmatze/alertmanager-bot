@@ -1,3 +1,7 @@
+## 0.4.2 / 2020-01-11
+
+* [BUGFIX] Fix flags with defaults that aren't required anymore [#96](https://github.com/metalmatze/alertmanager-bot/pull/96).
+
 ## 0.4.1 / 2020-01-07
 
 Update to Go 1.13 and dependencies.
