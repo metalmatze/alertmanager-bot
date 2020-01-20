@@ -187,11 +187,11 @@ receivers:
 
 ## Development
 
-Get all dependencies. We use [golang/dep](https://github.com/golang/dep).  
+You'll need golang >= 1.13 to have `go mod`.  
 Fetch all dependencies with:
 
-```
-dep ensure -v -vendor-only
+```bash
+go mod vendor
 ```
 
 Build the binary using `make`:
