@@ -17,10 +17,14 @@ var (
 	no  = false
 )
 
+// Alertmanager is mostly a wrapper around the swagger generated v2 client,
+// doing some conversion of types, adding additional metrics
+// and setting some defaults for the bot.
 type Alertmanager struct {
 	client *alertmanagerclient.Alertmanager
 }
 
+// New create a new Alertmanager wrapper for the bot.
 func New(u *url.URL) *Alertmanager {
 	cfg := alertmanagerclient.DefaultTransportConfig().WithSchemes([]string{u.Scheme}).WithHost(u.Host).WithBasePath(u.Path)
 	client := alertmanagerclient.NewHTTPClientWithConfig(strfmt.NewFormats(), cfg)
@@ -28,6 +32,7 @@ func New(u *url.URL) *Alertmanager {
 	return &Alertmanager{client}
 }
 
+// ListAlerts by making a request to Alertmanager with some sane defaults for the bot.
 func (a *Alertmanager) ListAlerts() ([]*types.Alert, error) {
 	resp, err := a.client.Alert.GetAlerts(alert.NewGetAlertsParams().WithActive(&yes).WithSilenced(&no))
 	if err != nil {
