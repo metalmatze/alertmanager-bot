@@ -22,10 +22,14 @@ const (
 	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
 )
 
+// Alertmanager is the interface describing functions
+// the bot needs to communicate with Alertmanager.
 type Alertmanager interface {
 	ListAlerts() ([]*types.Alert, error)
 }
 
+//Bot is the Telegram bot itself. It makes requests to Alertmanager, converts to Telegram
+// and handles notifying for incoming webhooks.
 type Bot struct {
 	logger       log.Logger
 	telebot      *telebot.Bot
@@ -34,6 +38,7 @@ type Bot struct {
 	templates *template.Template
 }
 
+//NewBot creates a new Telegram Alertmanager Bot.
 func NewBot(logger log.Logger, am Alertmanager, templates *template.Template, token string) (*Bot, error) {
 	t, err := telebot.NewBot(telebot.Settings{
 		Token:  token,
@@ -52,10 +57,12 @@ func NewBot(logger log.Logger, am Alertmanager, templates *template.Template, to
 	return b, nil
 }
 
+//Run the bot.
 func (b *Bot) Run() {
 	b.telebot.Start()
 }
 
+//Shutdown the bot gracefully.
 func (b *Bot) Shutdown() {
 	b.telebot.Stop()
 }
