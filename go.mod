@@ -18,6 +18,7 @@ require (
 	github.com/satori/go.uuid v1.1.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/weaveworks/mesh v0.0.0-20160126163632-f74318fb713b // indirect
+	go.etcd.io/bbolt v1.3.3
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/tucnak/telebot.v2 v2.0.0-20191225234705-baa616bc00d5
 )

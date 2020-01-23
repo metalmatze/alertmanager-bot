@@ -22,6 +22,9 @@ const (
 	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
 )
 
+type Store interface {
+}
+
 // Alertmanager is the interface describing functions
 // the bot needs to communicate with Alertmanager.
 type Alertmanager interface {
@@ -38,8 +41,11 @@ type Bot struct {
 	templates *template.Template
 }
 
+// BotOption passed to NewBot to change the default instance
+type BotOption func(b *Bot)
+
 //NewBot creates a new Telegram Alertmanager Bot.
-func NewBot(logger log.Logger, am Alertmanager, templates *template.Template, token string) (*Bot, error) {
+func NewBot(store Store, am Alertmanager, token string, opts ...BotOption) (*Bot, error) {
 	t, err := telebot.NewBot(telebot.Settings{
 		Token:  token,
 		Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
@@ -48,13 +54,28 @@ func NewBot(logger log.Logger, am Alertmanager, templates *template.Template, to
 		return nil, fmt.Errorf("failed to create bot: %w", err)
 	}
 
-	b := &Bot{logger: logger, telebot: t, alertmanager: am, templates: templates}
+	b := &Bot{
+		telebot:      t,
+		alertmanager: am,
+		logger:       log.NewNopLogger(),
+	}
+
+	for _, opt := range opts {
+		opt(b)
+	}
 
 	t.Handle(commandStart, b.handler(b.handleStart))
 	t.Handle(commandAlerts, b.handler(b.handleAlerts))
 	t.Handle(telebot.OnText, b.handler(b.handleDefault))
 
 	return b, nil
+}
+
+// WithLogger sets the logger for the Bot as an option
+func WithLogger(l log.Logger) BotOption {
+	return func(b *Bot) {
+		b.logger = l
+	}
 }
 
 //Run the bot.
