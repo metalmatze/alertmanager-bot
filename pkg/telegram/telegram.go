@@ -2,10 +2,12 @@ package telegram
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/hako/durafmt"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"gopkg.in/tucnak/telebot.v2"
@@ -75,6 +77,29 @@ func NewBot(store Store, am Alertmanager, token string, opts ...BotOption) (*Bot
 func WithLogger(l log.Logger) BotOption {
 	return func(b *Bot) {
 		b.logger = l
+	}
+}
+
+// WithTemplate creates a Template from file so that we can template alerts for Telegram.
+func WithTemplate(alertmanagerURL *url.URL, paths ...string) BotOption {
+	funcs := template.DefaultFuncs
+	funcs["since"] = func(t time.Time) string {
+		return durafmt.Parse(time.Since(t)).String()
+	}
+	funcs["duration"] = func(start time.Time, end time.Time) string {
+		return durafmt.Parse(end.Sub(start)).String()
+	}
+
+	template.DefaultFuncs = funcs
+	tmpl, err := template.FromGlobs(paths...)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse templates: %w", err))
+	}
+
+	tmpl.ExternalURL = alertmanagerURL
+
+	return func(b *Bot) {
+		b.templates = tmpl
 	}
 }
 
