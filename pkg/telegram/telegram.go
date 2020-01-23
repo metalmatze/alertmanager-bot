@@ -24,6 +24,7 @@ const (
 	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
 )
 
+// Store is a combination of different smaller interfaces for telegram storage.
 type Store interface {
 }
 
