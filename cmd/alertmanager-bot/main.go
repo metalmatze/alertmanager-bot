@@ -9,16 +9,15 @@ import (
 	"runtime"
 	"time"
 
-	alertmanager "github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
-	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
-	"github.com/prometheus/alertmanager/template"
+	bolt "go.etcd.io/bbolt"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
+	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 )
 
 const (
@@ -115,32 +114,12 @@ func main() {
 		"caller", log.DefaultCaller,
 	)
 
-	var tmpl *template.Template
-	{
-		funcs := template.DefaultFuncs
-		funcs["since"] = func(t time.Time) string {
-			return durafmt.Parse(time.Since(t)).String()
-		}
-		funcs["duration"] = func(start time.Time, end time.Time) string {
-			return durafmt.Parse(end.Sub(start)).String()
-		}
-
-		template.DefaultFuncs = funcs
-		tmpl, err = template.FromGlobs(config.templatesPaths...)
-		if err != nil {
-			level.Error(logger).Log("msg", "failed to parse templates", "err", err)
-			os.Exit(1)
-		}
-		tmpl.ExternalURL = config.alertmanager
+	db, err := bolt.Open(config.boltPath, 0666, &bolt.Options{Timeout: 5 * time.Second})
+	if err != nil {
+		kingpin.Errorf("failed to open bolt database: %s", err.Error())
+		os.Exit(1)
 	}
-
-	//var kvStore store.Store
-	//kvStore, err = boltdb.New([]string{config.boltPath}, &store.Config{Bucket: "alertmanager"})
-	//if err != nil {
-	//	level.Error(logger).Log("msg", "failed to create bolt store backend", "err", err)
-	//	os.Exit(1)
-	//}
-	//defer kvStore.Close()
+	defer db.Close()
 
 	_, cancel := context.WithCancel(context.Background())
 
@@ -151,11 +130,14 @@ func main() {
 
 	var g run.Group
 	{
+		store := telegram.NewBolt(db)
+
 		bot, err := telegram.NewBot(
-			log.WithPrefix(logger, "component", "telegram"),
+			store,
 			am,
-			tmpl,
 			config.telegramToken,
+			telegram.WithLogger(log.WithPrefix(logger, "component", "telegram")),
+			telegram.WithTemplate(config.alertmanager, config.templatesPaths...),
 		)
 		if err != nil {
 			level.Error(logger).Log("msg", "failed to create Telegram bot", "err", err)
