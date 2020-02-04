@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"time"
@@ -8,6 +9,8 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
+	"github.com/oklog/run"
+	"github.com/prometheus/alertmanager/notify/webhook"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"gopkg.in/tucnak/telebot.v2"
@@ -18,7 +21,6 @@ const (
 	commandStop  = "/stop"
 	commandHelp  = "/help"
 	//commandChats = "/chats"
-
 	commandAlerts = "/alerts"
 
 	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
@@ -105,13 +107,58 @@ func WithTemplate(alertmanagerURL *url.URL, paths ...string) BotOption {
 }
 
 //Run the bot.
-func (b *Bot) Run() {
-	b.telebot.Start()
+func (b *Bot) Run(webhooks <-chan webhook.Message) error {
+	var gr run.Group
+	{
+		gr.Add(func() error {
+			b.telebot.Start()
+			return nil
+		}, func(err error) {})
+	}
+	{
+		ctx, cancel := context.WithCancel(context.Background())
+		gr.Add(func() error {
+			return b.sendNotification(ctx, webhooks)
+		}, func(err error) {
+			cancel()
+		})
+	}
+	return gr.Run()
 }
 
 //Shutdown the bot gracefully.
 func (b *Bot) Shutdown() {
 	b.telebot.Stop()
+}
+
+func (b *Bot) sendNotification(ctx context.Context, webhooks <-chan webhook.Message) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case w := <-webhooks:
+			//chats, err := b.chats.List()
+			//if err != nil {
+			//	level.Error(b.logger).Log("msg", "failed to get chat list from store", "err", err)
+			//	continue
+			//}
+
+			out, err := b.templates.ExecuteHTMLString(`{{ template "telegram.default" . }}`, w.Data)
+			if err != nil {
+				level.Warn(b.logger).Log("msg", "failed to template alerts", "err", err)
+				continue
+			}
+
+			fmt.Println(out)
+
+			//for _, chat := range chats {
+			//	err = b.telegram.SendMessage(chat, b.truncateMessage(out), &telebot.SendOptions{ParseMode: telebot.ModeHTML})
+			//	if err != nil {
+			//		level.Warn(b.logger).Log("msg", "failed to send message to subscribed chat", "err", err)
+			//	}
+			//}
+		}
+	}
 }
 
 type messageHandler func(message *telebot.Message) error
