@@ -8,6 +8,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
+	"github.com/prometheus/alertmanager/notify/webhook"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"gopkg.in/tucnak/telebot.v2"
@@ -22,6 +23,7 @@ const (
 	commandAlerts = "/alerts"
 
 	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
+	responseStop  = "Alright, %s! I won't talk to you again.\n" + commandHelp
 )
 
 // Store is a combination of different smaller interfaces for telegram storage.
@@ -34,20 +36,30 @@ type Alertmanager interface {
 	ListAlerts() ([]*types.Alert, error)
 }
 
+type TelegramBot interface {
+	Start()
+	Stop()
+	Send(to telebot.Recipient, what interface{}, options ...interface{}) (*telebot.Message, error)
+}
+
 //Bot is the Telegram bot itself. It makes requests to Alertmanager, converts to Telegram
 // and handles notifying for incoming webhooks.
 type Bot struct {
-	logger       log.Logger
-	telebot      *telebot.Bot
+	logger  log.Logger
+	telebot TelegramBot
+	//telebot      *telebot.Bot
 	alertmanager Alertmanager
+	store        *ChatStore
 
 	templates *template.Template
+
+	shutdown chan struct{}
 }
 
 // BotOption passed to NewBot to change the default instance
 type BotOption func(b *Bot)
 
-//NewBot creates a new Telegram Alertmanager Bot.
+// NewBot creates a new Telegram Alertmanager Bot.
 func NewBot(store Store, am Alertmanager, token string, opts ...BotOption) (*Bot, error) {
 	t, err := telebot.NewBot(telebot.Settings{
 		Token:  token,
@@ -61,6 +73,8 @@ func NewBot(store Store, am Alertmanager, token string, opts ...BotOption) (*Bot
 		telebot:      t,
 		alertmanager: am,
 		logger:       log.NewNopLogger(),
+		store:        NewChatStore(),
+		shutdown:     make(chan struct{}),
 	}
 
 	for _, opt := range opts {
@@ -68,6 +82,7 @@ func NewBot(store Store, am Alertmanager, token string, opts ...BotOption) (*Bot
 	}
 
 	t.Handle(commandStart, b.handler(b.handleStart))
+	t.Handle(commandStop, b.handler(b.handleStop))
 	t.Handle(commandAlerts, b.handler(b.handleAlerts))
 	t.Handle(telebot.OnText, b.handler(b.handleDefault))
 
@@ -104,13 +119,27 @@ func WithTemplate(alertmanagerURL *url.URL, paths ...string) BotOption {
 	}
 }
 
-//Run the bot.
-func (b *Bot) Run() {
-	b.telebot.Start()
+// Run the bot.
+func (b *Bot) Run(messages <-chan webhook.Message) {
+	level.Info(b.logger).Log("msg", "starting Telegram bot")
+
+	go b.telebot.Start()
+
+	for {
+		select {
+		case <-b.shutdown:
+			return
+		case message := <-messages:
+			b.sendWebhook(message)
+		}
+	}
 }
 
-//Shutdown the bot gracefully.
+// Shutdown the bot gracefully.
 func (b *Bot) Shutdown() {
+	b.shutdown <- struct{}{}
+
+	level.Info(b.logger).Log("msg", "shutting down Telegram bot")
 	b.telebot.Stop()
 }
 
@@ -132,7 +161,23 @@ func (b *Bot) handleDefault(message *telebot.Message) error {
 }
 
 func (b *Bot) handleStart(message *telebot.Message) error {
+	if err := b.store.Add(message.Chat); err != nil {
+		return fmt.Errorf("failed to add chat to store: %w", err)
+	}
+
 	_, err := b.telebot.Send(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Bot) handleStop(message *telebot.Message) error {
+	if err := b.store.Remove(message.Chat.ID); err != nil {
+		return fmt.Errorf("failed to remove chat from store: %w", err)
+	}
+
+	_, err := b.telebot.Send(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName))
 	if err != nil {
 		return err
 	}

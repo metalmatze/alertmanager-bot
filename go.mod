@@ -11,12 +11,13 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/oklog/run v1.0.0
-	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/alertmanager v0.20.0
 	github.com/prometheus/client_golang v1.2.1
 	github.com/prometheus/common v0.7.0
 	github.com/satori/go.uuid v1.1.0 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
+	github.com/stretchr/testify v1.3.0
 	github.com/weaveworks/mesh v0.0.0-20160126163632-f74318fb713b // indirect
 	go.etcd.io/bbolt v1.3.3
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6

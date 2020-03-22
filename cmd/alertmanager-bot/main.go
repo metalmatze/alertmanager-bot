@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -13,6 +14,9 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/joho/godotenv"
 	"github.com/oklog/run"
+	"github.com/prometheus/alertmanager/notify/webhook"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	bolt "go.etcd.io/bbolt"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -123,8 +127,8 @@ func main() {
 
 	_, cancel := context.WithCancel(context.Background())
 
-	//// TODO Needs fan out for multiple bots
-	//webhooks := make(chan notify.WebhookMessage, 32)
+	// TODO Needs fan out for multiple bots
+	webhookMessages := make(chan webhook.Message, 32)
 
 	am := alertmanager.New(config.alertmanager)
 
@@ -136,7 +140,7 @@ func main() {
 			store,
 			am,
 			config.telegramToken,
-			telegram.WithLogger(log.WithPrefix(logger, "component", "telegram")),
+			telegram.WithLogger(log.With(logger, "component", "telegram")),
 			telegram.WithTemplate(config.alertmanager, config.templatesPaths...),
 		)
 		if err != nil {
@@ -145,84 +149,44 @@ func main() {
 		}
 
 		g.Add(func() error {
-			bot.Run()
+			bot.Run(webhookMessages)
 			return nil
 		}, func(err error) {
 			bot.Shutdown()
 		})
 	}
-	//{
-	//	tlogger := log.With(logger, "component", "telegram")
-	//
-	//	chats, err := telegram.NewChatStore(kvStore)
-	//	if err != nil {
-	//		level.Error(logger).Log("msg", "failed to create chat store", "err", err)
-	//		os.Exit(1)
-	//	}
-	//
-	//	bot, err := telegram.NewBot(
-	//		chats, config.telegramToken, config.telegramAdmin,
-	//		telegram.WithLogger(tlogger),
-	//		telegram.WithAddr(config.listenAddr),
-	//		telegram.WithAlertmanager(config.alertmanager),
-	//		telegram.WithTemplates(tmpl),
-	//		telegram.WithRevision(Revision),
-	//		telegram.WithStartTime(StartTime),
-	//	)
-	//	if err != nil {
-	//		level.Error(tlogger).Log("msg", "failed to create bot", "err", err)
-	//		os.Exit(2)
-	//	}
-	//
-	//	g.Add(func() error {
-	//		level.Info(tlogger).Log(
-	//			"msg", "starting alertmanager-bot",
-	//			"version", Version,
-	//			"revision", Revision,
-	//			"buildDate", BuildDate,
-	//			"goVersion", GoVersion,
-	//		)
-	//
-	//		// Runs the bot itself communicating with Telegram
-	//		return bot.Run(ctx, webhooks)
-	//	}, func(err error) {
-	//		cancel()
-	//	})
-	//}
-	//{
-	//	wlogger := log.With(logger, "component", "webserver")
-	//
-	//	// TODO: Use Heptio's healthcheck library
-	//	handleHealth := func(w http.ResponseWriter, r *http.Request) {
-	//		w.WriteHeader(http.StatusOK)
-	//	}
-	//
-	//	webhooksCounter := prometheus.NewCounter(prometheus.CounterOpts{
-	//		Namespace: "alertmanagerbot",
-	//		Name:      "webhooks_total",
-	//		Help:      "Number of webhooks received by this bot",
-	//	})
-	//
-	//	prometheus.MustRegister(webhooksCounter)
-	//
-	//	m := http.NewServeMux()
-	//	//m.HandleFunc("/", alertmanager.HandleWebhook(wlogger, webhooksCounter, webhooks))
-	//	m.Handle("/metrics", promhttp.Handler())
-	//	m.HandleFunc("/health", handleHealth)
-	//	m.HandleFunc("/healthz", handleHealth)
-	//
-	//	s := http.Server{
-	//		Addr:    config.listenAddr,
-	//		Handler: m,
-	//	}
-	//
-	//	g.Add(func() error {
-	//		level.Info(wlogger).Log("msg", "starting webserver", "addr", config.listenAddr)
-	//		return s.ListenAndServe()
-	//	}, func(err error) {
-	//		s.Shutdown(context.Background())
-	//	})
-	//}
+	{
+		wlogger := log.With(logger, "component", "webserver")
+
+		handleHealth := func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}
+
+		webhooksCounter := prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "alertmanagerbot_webhooks_total",
+			Help: "Number of webhooks received by this bot",
+		})
+
+		prometheus.MustRegister(webhooksCounter)
+
+		m := http.NewServeMux()
+		m.HandleFunc("/", alertmanager.HandleWebhook(wlogger, webhooksCounter, webhookMessages))
+		m.Handle("/metrics", promhttp.Handler())
+		m.HandleFunc("/health", handleHealth)
+		m.HandleFunc("/healthz", handleHealth)
+
+		s := http.Server{
+			Addr:    config.listenAddr,
+			Handler: m,
+		}
+
+		g.Add(func() error {
+			level.Info(wlogger).Log("msg", "starting webserver", "addr", config.listenAddr)
+			return s.ListenAndServe()
+		}, func(err error) {
+			_ = s.Shutdown(context.Background())
+		})
+	}
 	{
 		sig := make(chan os.Signal)
 		signal.Notify(sig, os.Interrupt, os.Kill)
