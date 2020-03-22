@@ -29,6 +29,16 @@ steps:
     - tag
     - pull_request
 
+- name: codecov
+  image: plugins/codecov
+  settings:
+    token:
+      from_secret: codecov
+  when:
+    event:
+      - push
+      - tag
+
 - name: release
   pull: default
   image: golang:1.13-alpine
