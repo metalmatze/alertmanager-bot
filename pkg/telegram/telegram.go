@@ -36,7 +36,8 @@ type Alertmanager interface {
 	ListAlerts() ([]*types.Alert, error)
 }
 
-type TelegramBot interface {
+// Teleboter describes the Telegram Bot's needed capabilities
+type Teleboter interface {
 	Start()
 	Stop()
 	Send(to telebot.Recipient, what interface{}, options ...interface{}) (*telebot.Message, error)
@@ -46,7 +47,7 @@ type TelegramBot interface {
 // and handles notifying for incoming webhooks.
 type Bot struct {
 	logger  log.Logger
-	telebot TelegramBot
+	telebot Teleboter
 	//telebot      *telebot.Bot
 	alertmanager Alertmanager
 	store        *ChatStore
