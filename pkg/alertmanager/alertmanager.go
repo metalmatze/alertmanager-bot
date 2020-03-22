@@ -1,7 +1,6 @@
 package alertmanager
 
 import (
-	"fmt"
 	"net/url"
 	"time"
 
@@ -62,8 +61,6 @@ func (a *Alertmanager) ListAlerts() ([]*types.Alert, error) {
 			//Timeout:   false,
 		})
 	}
-
-	fmt.Printf("%+v\n", alerts)
 
 	return alerts, nil
 }
