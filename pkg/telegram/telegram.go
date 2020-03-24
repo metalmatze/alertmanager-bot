@@ -41,6 +41,7 @@ type Teleboter interface {
 	Start()
 	Stop()
 	Send(to telebot.Recipient, what interface{}, options ...interface{}) (*telebot.Message, error)
+	Handle(endpoint interface{}, handler interface{})
 }
 
 //Bot is the Telegram bot itself. It makes requests to Alertmanager, converts to Telegram
@@ -62,16 +63,7 @@ type BotOption func(b *Bot)
 
 // NewBot creates a new Telegram Alertmanager Bot.
 func NewBot(store Store, am Alertmanager, token string, opts ...BotOption) (*Bot, error) {
-	t, err := telebot.NewBot(telebot.Settings{
-		Token:  token,
-		Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create bot: %w", err)
-	}
-
 	b := &Bot{
-		telebot:      t,
 		alertmanager: am,
 		logger:       log.NewNopLogger(),
 		store:        NewChatStore(),
@@ -82,12 +74,30 @@ func NewBot(store Store, am Alertmanager, token string, opts ...BotOption) (*Bot
 		opt(b)
 	}
 
-	t.Handle(commandStart, b.handler(b.handleStart))
-	t.Handle(commandStop, b.handler(b.handleStop))
-	t.Handle(commandAlerts, b.handler(b.handleAlerts))
-	t.Handle(telebot.OnText, b.handler(b.handleDefault))
+	if b.telebot == nil {
+		t, err := telebot.NewBot(telebot.Settings{
+			Token:  token,
+			Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create bot: %w", err)
+		}
+		b.telebot = t
+	}
+
+	b.telebot.Handle(commandStart, b.handler(b.handleStart))
+	b.telebot.Handle(commandStop, b.handler(b.handleStop))
+	b.telebot.Handle(commandAlerts, b.handler(b.handleAlerts))
+	b.telebot.Handle(telebot.OnText, b.handler(b.handleDefault))
 
 	return b, nil
+}
+
+// WithTelebot uses another implementation for a Telegram bot
+func WithTelebot(teleboter Teleboter) BotOption {
+	return func(b *Bot) {
+		b.telebot = teleboter
+	}
 }
 
 // WithLogger sets the logger for the Bot as an option

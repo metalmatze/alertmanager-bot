@@ -29,6 +29,10 @@ func (t *telebotMock) Send(to telebot.Recipient, what interface{}, options ...in
 	return &telebot.Message{}, nil
 }
 
+func (t *telebotMock) Handle(endpoint interface{}, handler interface{}) {
+	panic("implement Handle")
+}
+
 func TestBot_sendWebhook(t *testing.T) {
 	tm := &telebotMock{}
 	b := &Bot{
