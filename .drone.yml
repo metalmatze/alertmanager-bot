@@ -22,6 +22,20 @@ steps:
   - make build
   - make vet
   - make lint
+  when:
+    event:
+    - push
+    - tag
+    - pull_request
+
+- name: tests
+  pull: always
+  image: golang:1.13-alpine
+  environment:
+    GO111MODULE: on
+    GOPROXY: https://proxy.golang.org
+  commands:
+  - apk add -U git make
   - make test
   when:
     event:
