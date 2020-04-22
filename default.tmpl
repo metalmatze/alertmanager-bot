@@ -5,6 +5,9 @@
 {{ if .Annotations.message }}
 {{ .Annotations.message }}
 {{ end }}
+{{ if .Annotations.summary }}
+{{ .Annotations.summary }}
+{{ end }}
 {{ if .Annotations.description }}
 {{ .Annotations.description }}
 {{ end }}
