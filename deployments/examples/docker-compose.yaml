@@ -1,0 +1,21 @@
+networks:
+  alertmanager-bot: {}
+services:
+  alertmanager-bot:
+    command:
+    - --alertmanager.url=http://localhost:9093
+    - --log.level=info
+    - --store=bolt
+    - --bolt.path=/data/bot.db
+    environment:
+      TELEGRAM_ADMIN: "1234"
+      TELEGRAM_TOKEN: XXXXXXX
+    image: metalmatze/alertmanager-bot:0.4.2
+    networks:
+    - alertmanager-bot
+    ports:
+    - 8080:8080
+    restart: always
+    volumes:
+    - ./data:/data
+version: "3"

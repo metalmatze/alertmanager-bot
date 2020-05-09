@@ -124,20 +124,139 @@ docker run -d \
 	metalmatze/alertmanager-bot:0.4.2
 ```
 
-Usage within docker-compose:
+### docker-compose:
 
-```yml
-alertmanager-bot:
-  image: metalmatze/alertmanager-bot:0.4.2
-  environment:
-    ALERTMANAGER_URL: http://alertmanager:9093
-    BOLT_PATH: /data/bot.db
-    STORE: bolt
-    TELEGRAM_ADMIN: '1234567'
-    TELEGRAM_TOKEN: XXX
-    TEMPLATE_PATHS: /templates/default.tmpl
-  volumes:
-  - /srv/monitoring/alertmanager-bot:/data
+[embedmd]:# (deployments/examples/docker-compose.yaml)
+```yaml
+networks:
+  alertmanager-bot: {}
+services:
+  alertmanager-bot:
+    command:
+    - --alertmanager.url=http://localhost:9093
+    - --log.level=info
+    - --store=bolt
+    - --bolt.path=/data/bot.db
+    environment:
+      TELEGRAM_ADMIN: "1234"
+      TELEGRAM_TOKEN: XXXXXXX
+    image: metalmatze/alertmanager-bot:0.4.2
+    networks:
+    - alertmanager-bot
+    ports:
+    - 8080:8080
+    restart: always
+    volumes:
+    - ./data:/data
+version: "3"
+```
+
+### Kubernetes:
+
+[embedmd]:# (deployments/examples/kubernetes.yaml)
+```yaml
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    admin: MTIzNA==
+    token: WFhYWFhYWA==
+  kind: Secret
+  metadata:
+    labels:
+      app.kubernetes.io/name: alertmanager-bot
+    name: alertmanager-bot
+    namespace: monitoring
+  type: Opaque
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app.kubernetes.io/name: alertmanager-bot
+    name: alertmanager-bot
+    namespace: monitoring
+  spec:
+    ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    selector:
+      app.kubernetes.io/name: alertmanager-bot
+- apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    labels:
+      app.kubernetes.io/name: alertmanager-bot
+    name: alertmanager-bot
+    namespace: monitoring
+  spec:
+    podManagementPolicy: OrderedReady
+    replicas: 1
+    selector:
+      matchLabels:
+        app.kubernetes.io/name: alertmanager-bot
+    serviceName: alertmanager-bot
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/name: alertmanager-bot
+        name: alertmanager-bot
+        namespace: monitoring
+      spec:
+        containers:
+        - args:
+          - --alertmanager.url=http://localhost:9093
+          - --log.level=info
+          - --store=bolt
+          - --bolt.path=/data/bot.db
+          env:
+          - name: TELEGRAM_ADMIN
+            valueFrom:
+              secretKeyRef:
+                key: admin
+                name: alertmanager-bot
+          - name: TELEGRAM_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: token
+                name: alertmanager-bot
+          image: metalmatze/alertmanager-bot:0.4.2
+          imagePullPolicy: IfNotPresent
+          name: alertmanager-bot
+          ports:
+          - containerPort: 8080
+            name: http
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 25m
+              memory: 64Mi
+          volumeMounts:
+          - mountPath: /data
+            name: data
+        restartPolicy: Always
+        volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: data
+    volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        labels:
+          app.kubernetes.io/name: alertmanager-bot
+        name: alertmanager-bot
+        namespace: monitoring
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: standard
+kind: List
 ```
 
 ### Ansible
