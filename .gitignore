@@ -1,8 +1,7 @@
 /.env
 /alertmanager-bot
-/data.yml
+/deployments/examples/data
 /dist/
-/vendor/
 
 *coverage.out
 
