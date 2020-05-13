@@ -1,6 +1,22 @@
 function(params) {
   local bot = {
+    // Defining all the defaults
     local b = self,
+    name: 'alertmanager-bot',
+    image: 'metalmatze/alertmanager-bot:0.4.2',
+    alertmanager: {
+      url: 'http://localhost:9093',
+    },
+    ports: {
+      http: 8080,
+    },
+    log: {
+      level: 'info',
+      json: false,
+    },
+    storage: error 'please provide the storage configuration',
+
+    // Set defaults for Kubernetes from the defaults above
     metadata: {
       name: b.name,
       namespace: 'monitoring',
