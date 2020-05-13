@@ -90,7 +90,7 @@ items:
       metadata:
         labels:
           app.kubernetes.io/name: alertmanager-bot
-        name: alertmanager-bot
+        name: data
         namespace: monitoring
       spec:
         accessModes:

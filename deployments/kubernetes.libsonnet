@@ -124,7 +124,9 @@ function(params) {
         {
           apiVersion: 'v1',
           kind: 'PersistentVolumeClaim',
-          metadata: bot.metadata,
+          metadata: bot.metadata {
+            name: 'data',
+          },
           spec: {
             accessModes: ['ReadWriteOnce'],
             resources: { requests: { storage: bot.pvc.size } },
