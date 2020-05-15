@@ -2,7 +2,15 @@
 {{ range .Alerts }}
 {{ if eq .Status "firing"}}🔥 <b>{{ .Status | toUpper }}</b> 🔥{{ else }}<b>{{ .Status | toUpper }}</b>{{ end }}
 <b>{{ .Labels.alertname }}</b>
+{{ if .Annotations.message }}
 {{ .Annotations.message }}
+{{ end }}
+{{ if .Annotations.summary }}
+{{ .Annotations.summary }}
+{{ end }}
+{{ if .Annotations.description }}
+{{ .Annotations.description }}
+{{ end }}
 <b>Duration:</b> {{ duration .StartsAt .EndsAt }}{{ if ne .Status "firing"}}
 <b>Ended:</b> {{ .EndsAt | since }}{{ end }}
 {{ end }}
