@@ -276,7 +276,7 @@ ENV Variable | Description
 | CONSUL_URL        | The URL to use to connect with Consul, default: `localhost:8500` |
 | LISTEN_ADDR       | Address that the bot listens for webhooks, default: `0.0.0.0:8080` |
 | STORE             | The type of the store to use, choose from bolt (local) or consul (distributed) |
-| TELEGRAM_ADMIN    | The Telegram user id for the admin. The bot will only reply to messages sent from an admin. All other messages are dropped and logged on the bot's console. |
+| TELEGRAM_ADMIN    | The Telegram user id for the admin. The bot will only reply to messages sent from an admin. All other messages are dropped and logged on the bot's console.<br> Your user id you can get from [@userinfobot](https://t.me/userinfobot). |
 | TELEGRAM_TOKEN    | Token you get from [@botfather](https://telegram.me/botfather) |
 | TEMPLATE_PATHS    | Path to custom message templates, default template is `./default.tmpl`, in docker - `/templates/default.tmpl` |
 
