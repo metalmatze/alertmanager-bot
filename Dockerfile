@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM alpine:edge
 ENV TEMPLATE_PATHS=/templates/default.tmpl
 RUN apk add --update ca-certificates
 
