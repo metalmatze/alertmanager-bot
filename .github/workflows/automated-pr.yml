@@ -1,0 +1,36 @@
+name: automated-pr
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  repository_dispatch:
+    types: "manual run"
+  workflow_dispatch:
+
+jobs:
+  automated-pr:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+        with: 
+          repository:  metalmatze/alertmanager-bot
+          fetch-depth: '0'
+      -
+        name: Push to own repo
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.TOKEN }}
+          committer: Hugo Ferreira <hugoferreira@outlook.com>
+          commit-message: "Automated PR"
+          author: Hugo Ferreira <hugoferreira@outlook.com>
+          branch: automated-pr
+          delete-branch: true
+          base: master
+          push-to-fork: hferreira23/alertmanager-bot
+          title: automated-pr
+          assignees: hferreira23
+          reviewers: hferreira23

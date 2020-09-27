@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# Run a build-script, from within the repository.
+#
+
+set -e
+
+# Get the name of the script
+script=$1
+
+# Ensure something was specified
+if [ -z "${script}" ]; then
+    echo "*********************************"
+    echo " You must specify a build-script"
+    echo "*********************************"
+    exit 1
+fi
+
+# Ensure it exists
+if [ ! -e "${script}" ]; then
+    echo "*****************************************************************"
+    echo " build script not present - looked for ${script}"
+    echo "*****************************************************************"
+    exit 1
+fi
+
+# Ensure the script is executable.
+chmod 755 ${script} >/dev/null 2>/dev/null || true
+
+# Run it
+make
