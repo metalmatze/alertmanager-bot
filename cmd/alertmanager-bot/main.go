@@ -275,7 +275,7 @@ func main() {
 	{
 		tlogger := log.With(logger, "component", "telegram")
 
-		chats, err := telegram.NewChatStore(kvStore)
+		chats, err := telegram.NewChatStore(kvStore, config.storeKeyPrefix)
 		if err != nil {
 			level.Error(logger).Log("msg", "failed to create chat store", "err", err)
 			os.Exit(1)
