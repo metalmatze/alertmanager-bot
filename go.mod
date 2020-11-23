@@ -9,6 +9,8 @@ require (
 	github.com/cespare/xxhash v1.0.0 // indirect
 	github.com/circonus-labs/circonus-gometrics v2.0.0+incompatible // indirect
 	github.com/circonus-labs/circonusllhist v0.0.0-20170525201649-6e85b9352cf0 // indirect
+	github.com/coreos/etcd v3.3.25+incompatible // indirect
+	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/docker/libkv v0.2.1
 	github.com/go-kit/kit v0.8.0
 	github.com/golang/protobuf v1.3.2 // indirect
