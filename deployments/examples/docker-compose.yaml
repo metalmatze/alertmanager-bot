@@ -10,7 +10,7 @@ services:
     environment:
       TELEGRAM_ADMIN: "1234"
       TELEGRAM_TOKEN: XXXXXXX
-    image: metalmatze/alertmanager-bot:0.4.2
+    image: metalmatze/alertmanager-bot:0.4.3
     networks:
     - alertmanager-bot
     ports:

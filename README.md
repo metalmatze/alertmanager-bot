@@ -73,7 +73,7 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 > Version: 0.5.1  
 > Uptime: 3 weeks 1 day 6 hours 15 minutes 2 seconds  
 > **AlertManager Bot**  
-> Version: 0.4.2  
+> Version: 0.4.3  
 > Uptime: 3 weeks 1 hour 17 minutes 19 seconds  
 
 ###### /help
@@ -93,7 +93,7 @@ Right now it supports [Telegram](https://telegram.org/), but I'd like to [add mo
 
 ### Docker
 
-`docker pull metalmatze/alertmanager-bot:0.4.2`
+`docker pull metalmatze/alertmanager-bot:0.4.3`
 
 Start as a command:
 
@@ -108,7 +108,7 @@ docker run -d \
 	-e 'TELEGRAM_TOKEN=XXX' \
 	-v '/srv/monitoring/alertmanager-bot:/data' \
 	--name alertmanager-bot \
-	metalmatze/alertmanager-bot:0.4.2
+	metalmatze/alertmanager-bot:0.4.3
 ```
 
 #### Consul Storage
@@ -121,7 +121,7 @@ docker run -d \
 	-e 'TELEGRAM_ADMIN=1234567' \
 	-e 'TELEGRAM_TOKEN=XXX' \
 	--name alertmanager-bot \
-	metalmatze/alertmanager-bot:0.4.2
+	metalmatze/alertmanager-bot:0.4.3
 ```
 
 ### docker-compose:
@@ -140,7 +140,7 @@ services:
     environment:
       TELEGRAM_ADMIN: "1234"
       TELEGRAM_TOKEN: XXXXXXX
-    image: metalmatze/alertmanager-bot:0.4.2
+    image: metalmatze/alertmanager-bot:0.4.3
     networks:
     - alertmanager-bot
     ports:
@@ -220,7 +220,7 @@ items:
               secretKeyRef:
                 key: token
                 name: alertmanager-bot
-          image: metalmatze/alertmanager-bot:0.4.2
+          image: metalmatze/alertmanager-bot:0.4.3
           imagePullPolicy: IfNotPresent
           name: alertmanager-bot
           ports:

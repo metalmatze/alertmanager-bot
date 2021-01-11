@@ -1,6 +1,6 @@
 {
   name: 'alertmanager-bot',
-  image: 'metalmatze/alertmanager-bot:0.4.2',
+  image: 'metalmatze/alertmanager-bot:0.4.3',
 
   alertmanager: {
     url: 'http://localhost:9093',
