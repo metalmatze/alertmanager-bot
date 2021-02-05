@@ -329,17 +329,10 @@ receivers:
 
 ## Development
 
-Get all dependencies. We use [golang/dep](https://github.com/golang/dep).  
-Fetch all dependencies with:
-
-```
-dep ensure -v -vendor-only
-```
-
 Build the binary using `make`:
 
 ```
-make install
+make
 ```
 
 In case you have `$GOPATH/bin` in your `$PATH` you can now simply start the bot by running:
