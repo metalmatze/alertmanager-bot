@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  build-test:
+  build-test-lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
