@@ -1,11 +1,10 @@
 {{ define "telegram.default" }}
 {{ range .Alerts }}
-{{ if eq .Status "firing"}}🔥 <b>{{ .Status | toUpper }}</b>{{ else }}✅ <b>{{ .Status | toUpper }}</b>{{ end }}
-{{ range $key, $value := .Labels }}
-{{ if eq $key "alertname"}}<b>{{ $key | toUpper }}</b>: {{ $value }}{{ else }}{{ $key }}: {{ $value }}{{ end }}{{ end }}
-=============
-{{ range $key, $value := .Annotations }}{{ $key }}: {{ $value }}{{ end }}
-=============
+{{ if eq .Status "firing"}}🔥 <b>{{ .Labels.alertname }}</b> 🔥{{ else }}✅ <b>{{ .Labels.alertname }}</b> ✅{{ end }}
+<b>Labels:</b>
+    {{ range $key, $value := .Labels }}{{ if ne $key "alertname" }}{{ $key }}: {{ $value }}{{ end }}{{ end }}
+<b>Annotations:</b>
+    {{ range $key, $value := .Annotations }}{{ $key }}: {{ $value }}{{ end }}
 <b>Duration:</b> {{ duration .StartsAt .EndsAt }}{{ if ne .Status "firing"}}
 <b>Ended:</b> {{ .EndsAt | since }}{{ end }}
 {{ end }}
