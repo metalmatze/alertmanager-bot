@@ -21,28 +21,28 @@ import (
 )
 
 const (
-	commandStart = "/start"
-	commandStop  = "/stop"
-	commandHelp  = "/help"
-	commandChats = "/chats"
+	CommandStart = "/start"
+	CommandStop  = "/stop"
+	CommandHelp  = "/help"
+	CommandChats = "/chats"
 
-	commandStatus   = "/status"
-	commandAlerts   = "/alerts"
-	commandSilences = "/silences"
+	CommandStatus   = "/status"
+	CommandAlerts   = "/alerts"
+	CommandSilences = "/silences"
 
-	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
-	responseStop  = "Alright, %s! I won't talk to you again.\n" + commandHelp
-	responseHelp  = `
+	responseStart = "Hey, %s! I will now keep you up to date!\n" + CommandHelp
+	responseStop  = "Alright, %s! I won't talk to you again.\n" + CommandHelp
+	ResponseHelp  = `
 I'm a Prometheus AlertManager Bot for Telegram. I will notify you about alerts.
-You can also ask me about my ` + commandStatus + `, ` + commandAlerts + ` & ` + commandSilences + `
+You can also ask me about my ` + CommandStatus + `, ` + CommandAlerts + ` & ` + CommandSilences + `
 
 Available commands:
-` + commandStart + ` - Subscribe for alerts.
-` + commandStop + ` - Unsubscribe for alerts.
-` + commandStatus + ` - Print the current status.
-` + commandAlerts + ` - List all alerts.
-` + commandSilences + ` - List all silences.
-` + commandChats + ` - List all users and group chats that subscribed.
+` + CommandStart + ` - Subscribe for alerts.
+` + CommandStop + ` - Unsubscribe for alerts.
+` + CommandStatus + ` - Print the current status.
+` + CommandAlerts + ` - List all alerts.
+` + CommandSilences + ` - List all silences.
+` + CommandChats + ` - List all users and group chats that subscribed.
 `
 )
 
@@ -53,7 +53,7 @@ type BotChatStore interface {
 	Remove(telebot.Chat) error
 }
 
-type TelegramBot interface {
+type Telebot interface {
 	Listen(subscription chan telebot.Message, timeout time.Duration)
 	SendChatAction(recipient telebot.Recipient, action telebot.ChatAction) error
 	SendMessage(recipient telebot.Recipient, message string, options *telebot.SendOptions) error
@@ -70,7 +70,7 @@ type Bot struct {
 	revision     string
 	startTime    time.Time
 
-	telegram TelegramBot
+	telegram Telebot
 
 	commandsCounter *prometheus.CounterVec
 }
@@ -88,7 +88,7 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 	return NewBotWithTelegram(chats, bot, admin, opts...)
 }
 
-func NewBotWithTelegram(chats BotChatStore, bot TelegramBot, admin int, opts ...BotOption) (*Bot, error) {
+func NewBotWithTelegram(chats BotChatStore, bot Telebot, admin int, opts ...BotOption) (*Bot, error) {
 	commandsCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "alertmanagerbot",
 		Name:      "commands_total",
@@ -187,13 +187,13 @@ func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) er
 	//commandSuffix := fmt.Sprintf("@%s", b.telegram.Identity().Username)
 
 	commands := map[string]func(message telebot.Message){
-		commandStart:    b.handleStart,
-		commandStop:     b.handleStop,
-		commandHelp:     b.handleHelp,
-		commandChats:    b.handleChats,
-		commandStatus:   b.handleStatus,
-		commandAlerts:   b.handleAlerts,
-		commandSilences: b.handleSilences,
+		CommandStart:    b.handleStart,
+		CommandStop:     b.handleStop,
+		CommandHelp:     b.handleHelp,
+		CommandChats:    b.handleChats,
+		CommandStatus:   b.handleStatus,
+		CommandAlerts:   b.handleAlerts,
+		CommandSilences: b.handleSilences,
 	}
 
 	// init counters with 0
@@ -323,7 +323,7 @@ func (b *Bot) handleStart(message telebot.Message) {
 
 	_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
 	level.Info(b.logger).Log(
-		"user subscribed",
+		"msg", "user subscribed",
 		"username", message.Sender.Username,
 		"user_id", message.Sender.ID,
 	)
@@ -338,14 +338,14 @@ func (b *Bot) handleStop(message telebot.Message) {
 
 	_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
 	level.Info(b.logger).Log(
-		"user unsubscribed",
+		"msg", "user unsubscribed",
 		"username", message.Sender.Username,
 		"user_id", message.Sender.ID,
 	)
 }
 
 func (b *Bot) handleHelp(message telebot.Message) {
-	_ = b.telegram.SendMessage(message.Chat, responseHelp, nil)
+	_ = b.telegram.SendMessage(message.Chat, ResponseHelp, nil)
 }
 
 func (b *Bot) handleChats(message telebot.Message) {
@@ -353,6 +353,11 @@ func (b *Bot) handleChats(message telebot.Message) {
 	if err != nil {
 		level.Warn(b.logger).Log("msg", "failed to list chats from chat store", "err", err)
 		_ = b.telegram.SendMessage(message.Chat, "I can't list the subscribed chats.", nil)
+		return
+	}
+
+	if len(chats) == 0 {
+		_ = b.telegram.SendMessage(message.Chat, "Currently no one is subscribed.", nil)
 		return
 	}
 
