@@ -53,6 +53,12 @@ type BotChatStore interface {
 	Remove(telebot.Chat) error
 }
 
+type TelegramBot interface {
+	Listen(subscription chan telebot.Message, timeout time.Duration)
+	SendChatAction(recipient telebot.Recipient, action telebot.ChatAction) error
+	SendMessage(recipient telebot.Recipient, message string, options *telebot.SendOptions) error
+}
+
 // Bot runs the alertmanager telegram.
 type Bot struct {
 	addr         string
@@ -64,7 +70,7 @@ type Bot struct {
 	revision     string
 	startTime    time.Time
 
-	telegram *telebot.Bot
+	telegram TelegramBot
 
 	commandsCounter *prometheus.CounterVec
 }
@@ -79,14 +85,15 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 		return nil, err
 	}
 
+	return NewBotWithTelegram(chats, bot, admin, opts...)
+}
+
+func NewBotWithTelegram(chats BotChatStore, bot TelegramBot, admin int, opts ...BotOption) (*Bot, error) {
 	commandsCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "alertmanagerbot",
 		Name:      "commands_total",
 		Help:      "Number of commands received by command name",
 	}, []string{"command"})
-	if err := prometheus.Register(commandsCounter); err != nil {
-		return nil, err
-	}
 
 	b := &Bot{
 		logger:          log.NewNopLogger(),
@@ -110,6 +117,13 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 func WithLogger(l log.Logger) BotOption {
 	return func(b *Bot) {
 		b.logger = l
+	}
+}
+
+// WithRegistry registers the Bot's metrics with the passed prometheus.Registry.
+func WithRegistry(r *prometheus.Registry) BotOption {
+	return func(b *Bot) {
+		r.MustRegister(b.commandsCounter)
 	}
 }
 
@@ -170,7 +184,7 @@ func (b *Bot) isAdminID(id int) bool {
 
 // Run the telegram and listen to messages send to the telegram.
 func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) error {
-	commandSuffix := fmt.Sprintf("@%s", b.telegram.Identity.Username)
+	//commandSuffix := fmt.Sprintf("@%s", b.telegram.Identity().Username)
 
 	commands := map[string]func(message telebot.Message){
 		commandStart:    b.handleStart,
@@ -201,10 +215,10 @@ func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) er
 			return err
 		}
 
-		// Remove the command suffix from the text, /help@BotName => /help
-		text := strings.Replace(message.Text, commandSuffix, "", -1)
+		// TODO: Remove the command suffix from the text, /help@BotName => /help
+		//text := strings.Replace(message.Text, commandSuffix, "", -1)
 		// Only take the first part into account, /help foo => /help
-		text = strings.Split(text, " ")[0]
+		text := strings.Split(message.Text, " ")[0]
 
 		level.Debug(b.logger).Log("msg", "message received", "text", text)
 

@@ -189,6 +189,8 @@ func main() {
 		"caller", log.DefaultCaller,
 	)
 
+	reg := prometheus.NewRegistry()
+
 	var tmpl *template.Template
 	{
 		funcs := template.DefaultFuncs
@@ -285,6 +287,7 @@ func main() {
 		bot, err := telegram.NewBot(
 			chats, config.telegramToken, config.telegramAdmins[0],
 			telegram.WithLogger(tlogger),
+			telegram.WithRegistry(reg),
 			telegram.WithAddr(config.listenAddr),
 			telegram.WithAlertmanager(config.alertmanager),
 			telegram.WithTemplates(tmpl),
@@ -330,7 +333,7 @@ func main() {
 
 		m := http.NewServeMux()
 		m.HandleFunc("/", alertmanager.HandleWebhook(wlogger, webhooksCounter, webhooks))
-		m.Handle("/metrics", promhttp.Handler())
+		m.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 		m.HandleFunc("/health", handleHealth)
 		m.HandleFunc("/healthz", handleHealth)
 
