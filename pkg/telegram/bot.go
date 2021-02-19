@@ -26,12 +26,9 @@ const (
 	commandHelp  = "/help"
 	commandChats = "/chats"
 
-	commandStatus     = "/status"
-	commandAlerts     = "/alerts"
-	commandSilences   = "/silences"
-	commandSilenceAdd = "/silence_add"
-	commandSilence    = "/silence"
-	commandSilenceDel = "/silence_del"
+	commandStatus   = "/status"
+	commandAlerts   = "/alerts"
+	commandSilences = "/silences"
 
 	responseStart = "Hey, %s! I will now keep you up to date!\n" + commandHelp
 	responseStop  = "Alright, %s! I won't talk to you again.\n" + commandHelp
@@ -49,14 +46,14 @@ Available commands:
 `
 )
 
-// BotChatStore is all the Bot needs to store and read
+// BotChatStore is all the Bot needs to store and read.
 type BotChatStore interface {
 	List() ([]telebot.Chat, error)
 	Add(telebot.Chat) error
 	Remove(telebot.Chat) error
 }
 
-// Bot runs the alertmanager telegram
+// Bot runs the alertmanager telegram.
 type Bot struct {
 	addr         string
 	admins       []int // must be kept sorted
@@ -70,13 +67,12 @@ type Bot struct {
 	telegram *telebot.Bot
 
 	commandsCounter *prometheus.CounterVec
-	webhooksCounter prometheus.Counter
 }
 
-// BotOption passed to NewBot to change the default instance
+// BotOption passed to NewBot to change the default instance.
 type BotOption func(b *Bot)
 
-// NewBot creates a Bot with the UserStore and telegram telegram
+// NewBot creates a Bot with the UserStore and telegram telegram.
 func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bot, error) {
 	bot, err := telebot.NewBot(token)
 	if err != nil {
@@ -110,42 +106,42 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 	return b, nil
 }
 
-// WithLogger sets the logger for the Bot as an option
+// WithLogger sets the logger for the Bot as an option.
 func WithLogger(l log.Logger) BotOption {
 	return func(b *Bot) {
 		b.logger = l
 	}
 }
 
-// WithAddr sets the internal listening addr of the bot's web server receiving webhooks
+// WithAddr sets the internal listening addr of the bot's web server receiving webhooks.
 func WithAddr(addr string) BotOption {
 	return func(b *Bot) {
 		b.addr = addr
 	}
 }
 
-// WithAlertmanager sets the connection url for the Alertmanager
+// WithAlertmanager sets the connection url for the Alertmanager.
 func WithAlertmanager(u *url.URL) BotOption {
 	return func(b *Bot) {
 		b.alertmanager = u
 	}
 }
 
-// WithTemplates uses Alertmanager template to render messages for Telegram
+// WithTemplates uses Alertmanager template to render messages for Telegram.
 func WithTemplates(t *template.Template) BotOption {
 	return func(b *Bot) {
 		b.templates = t
 	}
 }
 
-// WithRevision is setting the Bot's revision for status commands
+// WithRevision is setting the Bot's revision for status commands.
 func WithRevision(r string) BotOption {
 	return func(b *Bot) {
 		b.revision = r
 	}
 }
 
-// WithStartTime is setting the Bot's start time for status commands
+// WithStartTime is setting the Bot's start time for status commands.
 func WithStartTime(st time.Time) BotOption {
 	return func(b *Bot) {
 		b.startTime = st
@@ -161,9 +157,9 @@ func WithExtraAdmins(ids ...int) BotOption {
 	}
 }
 
-// SendAdminMessage to the admin's ID with a message
+// SendAdminMessage to the admin's ID with a message.
 func (b *Bot) SendAdminMessage(adminID int, message string) {
-	b.telegram.SendMessage(telebot.User{ID: adminID}, message, nil)
+	_ = b.telegram.SendMessage(telebot.User{ID: adminID}, message, nil)
 }
 
 // isAdminID returns whether id is one of the configured admin IDs.
@@ -172,7 +168,7 @@ func (b *Bot) isAdminID(id int) bool {
 	return i < len(b.admins) && b.admins[i] == id
 }
 
-// Run the telegram and listen to messages send to the telegram
+// Run the telegram and listen to messages send to the telegram.
 func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) error {
 	commandSuffix := fmt.Sprintf("@%s", b.telegram.Identity.Username)
 
@@ -217,7 +213,7 @@ func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) er
 
 		if !ok {
 			b.commandsCounter.WithLabelValues("incomprehensible").Inc()
-			b.telegram.SendMessage(
+			_ = b.telegram.SendMessage(
 				message.Chat,
 				"Sorry, I don't understand...",
 				nil,
@@ -265,7 +261,7 @@ func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) er
 	return gr.Run()
 }
 
-// sendWebhook sends messages received via webhook to all subscribed chats
+// sendWebhook sends messages received via webhook to all subscribed chats.
 func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan notify.WebhookMessage) error {
 	for {
 		select {
@@ -307,11 +303,11 @@ func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan notify.WebhookMes
 func (b *Bot) handleStart(message telebot.Message) {
 	if err := b.chats.Add(message.Chat); err != nil {
 		level.Warn(b.logger).Log("msg", "failed to add chat to chat store", "err", err)
-		b.telegram.SendMessage(message.Chat, "I can't add this chat to the subscribers list.", nil)
+		_ = b.telegram.SendMessage(message.Chat, "I can't add this chat to the subscribers list.", nil)
 		return
 	}
 
-	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
+	_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName), nil)
 	level.Info(b.logger).Log(
 		"user subscribed",
 		"username", message.Sender.Username,
@@ -322,11 +318,11 @@ func (b *Bot) handleStart(message telebot.Message) {
 func (b *Bot) handleStop(message telebot.Message) {
 	if err := b.chats.Remove(message.Chat); err != nil {
 		level.Warn(b.logger).Log("msg", "failed to remove chat from chat store", "err", err)
-		b.telegram.SendMessage(message.Chat, "I can't remove this chat from the subscribers list.", nil)
+		_ = b.telegram.SendMessage(message.Chat, "I can't remove this chat from the subscribers list.", nil)
 		return
 	}
 
-	b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
+	_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf(responseStop, message.Sender.FirstName), nil)
 	level.Info(b.logger).Log(
 		"user unsubscribed",
 		"username", message.Sender.Username,
@@ -335,14 +331,14 @@ func (b *Bot) handleStop(message telebot.Message) {
 }
 
 func (b *Bot) handleHelp(message telebot.Message) {
-	b.telegram.SendMessage(message.Chat, responseHelp, nil)
+	_ = b.telegram.SendMessage(message.Chat, responseHelp, nil)
 }
 
 func (b *Bot) handleChats(message telebot.Message) {
 	chats, err := b.chats.List()
 	if err != nil {
 		level.Warn(b.logger).Log("msg", "failed to list chats from chat store", "err", err)
-		b.telegram.SendMessage(message.Chat, "I can't list the subscribed chats.", nil)
+		_ = b.telegram.SendMessage(message.Chat, "I can't list the subscribed chats.", nil)
 		return
 	}
 
@@ -355,21 +351,21 @@ func (b *Bot) handleChats(message telebot.Message) {
 		}
 	}
 
-	b.telegram.SendMessage(message.Chat, "Currently these chat have subscribed:\n"+list, nil)
+	_ = b.telegram.SendMessage(message.Chat, "Currently these chat have subscribed:\n"+list, nil)
 }
 
 func (b *Bot) handleStatus(message telebot.Message) {
 	s, err := alertmanager.Status(b.logger, b.alertmanager.String())
 	if err != nil {
 		level.Warn(b.logger).Log("msg", "failed to get status", "err", err)
-		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
+		_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
 		return
 	}
 
 	uptime := durafmt.Parse(time.Since(s.Data.Uptime))
 	uptimeBot := durafmt.Parse(time.Since(b.startTime))
 
-	b.telegram.SendMessage(
+	_ = b.telegram.SendMessage(
 		message.Chat,
 		fmt.Sprintf(
 			"*AlertManager*\nVersion: %s\nUptime: %s\n*AlertManager Bot*\nVersion: %s\nUptime: %s",
@@ -385,12 +381,12 @@ func (b *Bot) handleStatus(message telebot.Message) {
 func (b *Bot) handleAlerts(message telebot.Message) {
 	alerts, err := alertmanager.ListAlerts(b.logger, b.alertmanager.String())
 	if err != nil {
-		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
+		_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
 		return
 	}
 
 	if len(alerts) == 0 {
-		b.telegram.SendMessage(message.Chat, "No alerts right now! 🎉", nil)
+		_ = b.telegram.SendMessage(message.Chat, "No alerts right now! 🎉", nil)
 		return
 	}
 
@@ -410,12 +406,12 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 func (b *Bot) handleSilences(message telebot.Message) {
 	silences, err := alertmanager.ListSilences(b.logger, b.alertmanager.String())
 	if err != nil {
-		b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
+		_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
 		return
 	}
 
 	if len(silences) == 0 {
-		b.telegram.SendMessage(message.Chat, "No silences right now.", nil)
+		_ = b.telegram.SendMessage(message.Chat, "No silences right now.", nil)
 		return
 	}
 
@@ -424,7 +420,7 @@ func (b *Bot) handleSilences(message telebot.Message) {
 		out = out + alertmanager.SilenceMessage(silence) + "\n"
 	}
 
-	b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+	_ = b.telegram.SendMessage(message.Chat, out, &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 }
 
 func (b *Bot) tmplAlerts(alerts ...*types.Alert) (string, error) {
@@ -438,7 +434,7 @@ func (b *Bot) tmplAlerts(alerts ...*types.Alert) (string, error) {
 	return out, nil
 }
 
-// Truncate very big message
+// Truncate very big message.
 func (b *Bot) truncateMessage(str string) string {
 	truncateMsg := str
 	if len(str) > 4095 { // telegram API can only support 4096 bytes per message
