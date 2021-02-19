@@ -8,18 +8,18 @@ import (
 	"github.com/tucnak/telebot"
 )
 
-// ChatStore writes the users to a libkv store backend
+// ChatStore writes the users to a libkv store backend.
 type ChatStore struct {
 	kv             store.Store
 	storeKeyPrefix string
 }
 
-// NewChatStore stores telegram chats in the provided kv backend
+// NewChatStore stores telegram chats in the provided kv backend.
 func NewChatStore(kv store.Store, storeKeyPrefix string) (*ChatStore, error) {
 	return &ChatStore{kv: kv, storeKeyPrefix: storeKeyPrefix}, nil
 }
 
-// List all chats saved in the kv backend
+// List all chats saved in the kv backend.
 func (s *ChatStore) List() ([]telebot.Chat, error) {
 	kvPairs, err := s.kv.List(s.storeKeyPrefix)
 	if err != nil {
@@ -38,7 +38,7 @@ func (s *ChatStore) List() ([]telebot.Chat, error) {
 	return chats, nil
 }
 
-// Add a telegram chat to the kv backend
+// Add a telegram chat to the kv backend.
 func (s *ChatStore) Add(c telebot.Chat) error {
 	b, err := json.Marshal(c)
 	if err != nil {
@@ -50,7 +50,7 @@ func (s *ChatStore) Add(c telebot.Chat) error {
 	return s.kv.Put(key, b, nil)
 }
 
-// Remove a telegram chat from the kv backend
+// Remove a telegram chat from the kv backend.
 func (s *ChatStore) Remove(c telebot.Chat) error {
 	key := fmt.Sprintf("%s/%d", s.storeKeyPrefix, c.ID)
 	return s.kv.Delete(key)

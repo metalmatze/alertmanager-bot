@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/docker/libkv/store"
@@ -57,7 +58,7 @@ var (
 )
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	config := struct {
 		alertmanager           *url.URL
@@ -342,12 +343,12 @@ func main() {
 			level.Info(wlogger).Log("msg", "starting webserver", "addr", config.listenAddr)
 			return s.ListenAndServe()
 		}, func(err error) {
-			s.Shutdown(context.Background())
+			_ = s.Shutdown(context.Background())
 		})
 	}
 	{
 		sig := make(chan os.Signal)
-		signal.Notify(sig, os.Interrupt, os.Kill)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 
 		g.Add(func() error {
 			<-sig

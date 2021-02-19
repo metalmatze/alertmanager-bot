@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// HandleWebhook returns a HandlerFunc that forwards webhooks to all bots via a channel
+// HandleWebhook returns a HandlerFunc that forwards webhooks to all bots via a channel.
 func HandleWebhook(logger log.Logger, counter prometheus.Counter, webhooks chan<- notify.WebhookMessage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
