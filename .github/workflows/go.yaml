@@ -1,0 +1,27 @@
+name: go
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [ 1.16.x ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: build
+        run: make build
+      - name: fmt
+        run: make fmt
+      - name: vet
+        run: make vet
+      - name: lint
+        run: make lint
+      - name: test
+        run: make test
