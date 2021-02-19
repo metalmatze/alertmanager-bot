@@ -40,7 +40,7 @@ func ListSilences(logger log.Logger, alertmanagerURL string) ([]types.Silence, e
 	return silences, err
 }
 
-// SilenceMessage converts a silences to a message string
+// SilenceMessage converts a silences to a message string.
 func SilenceMessage(s types.Silence) string {
 	var alertname, emoji, matchers, duration string
 
@@ -76,7 +76,7 @@ func SilenceMessage(s types.Silence) string {
 	)
 }
 
-// Resolved returns if a silence is reolved by EndsAt
+// Resolved returns if a silence is resolved by EndsAt.
 func Resolved(s types.Silence) bool {
 	if s.EndsAt.IsZero() {
 		return false

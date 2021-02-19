@@ -1,3 +1,20 @@
+## 0.4.3 / 2021-01-11
+
+* [ENHANCEMENT] Support description annotation which is used by newer alerts [#113](https://github.com/metalmatze/alertmanager-bot/pull/113).
+* [ENHANCEMENT] Create jsonnet-based deployments for Kubernets and Docker Compose [#115](https://github.com/metalmatze/alertmanager-bot/pull/115).
+* [BUGFIX] Don't have a fix "EXPOSE" as the port is configurable [#106](https://github.com/metalmatze/alertmanager-bot/pull/106).
+
+## 0.4.2 / 2020-01-11
+
+* [BUGFIX] Fix flags with defaults that aren't required anymore [#96](https://github.com/metalmatze/alertmanager-bot/pull/96).
+
+## 0.4.1 / 2020-01-07
+
+Update to Go 1.13 and dependencies.
+
+* [BUGFIX] Fix default template path [#55](https://github.com/metalmatze/alertmanager-bot/pull/55).
+* [BUGFIX] Bring back defaults for flags [#93](https://github.com/metalmatze/alertmanager-bot/pull/93).
+
 ## 0.4.0 / 2019-02-19
 
 * [FEATURE] Add ability to use templates for Telegram messages [#32](https://github.com/metalmatze/alertmanager-bot/pull/32).

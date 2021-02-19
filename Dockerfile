@@ -5,8 +5,6 @@ RUN apk add --update ca-certificates tini
 COPY ./default.tmpl /templates/default.tmpl
 COPY ./alertmanager-bot /usr/bin/alertmanager-bot
 
-EXPOSE 8080
-
 USER nobody
 
 ENTRYPOINT ["/sbin/tini", "--"]

@@ -2,18 +2,23 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/docker/libkv/store"
 	"github.com/docker/libkv/store/boltdb"
 	"github.com/docker/libkv/store/consul"
+	"github.com/docker/libkv/store/etcd"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/hako/durafmt"
@@ -31,6 +36,7 @@ import (
 const (
 	storeBolt   = "bolt"
 	storeConsul = "consul"
+	storeEtcd   = "etcd"
 
 	levelDebug = "debug"
 	levelInfo  = "info"
@@ -52,40 +58,76 @@ var (
 )
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	config := struct {
-		alertmanager   *url.URL
-		boltPath       string
-		consul         *url.URL
-		listenAddr     string
-		logLevel       string
-		logJSON        bool
-		store          string
-		telegramAdmins []int
-		telegramToken  string
-		templatesPaths []string
+		alertmanager           *url.URL
+		boltPath               string
+		consul                 *url.URL
+		etcd                   *url.URL
+		etcdInsecure           bool
+		etcdInsecureSkipVerify bool
+		etcdCertFile           string
+		etcdKeyFile            string
+		etcdCAFile             string
+		listenAddr             string
+		logLevel               string
+		logJSON                bool
+		store                  string
+		telegramAdmins         []int
+		telegramToken          string
+		templatesPaths         []string
+		storeKeyPrefix         string
 	}{}
 
 	a := kingpin.New("alertmanager-bot", "Bot for Prometheus' Alertmanager")
 	a.HelpFlag.Short('h')
 
 	a.Flag("alertmanager.url", "The URL that's used to connect to the alertmanager").
-		Required().
 		Envar("ALERTMANAGER_URL").
+		Default("http://localhost:9093/").
 		URLVar(&config.alertmanager)
 
 	a.Flag("bolt.path", "The path to the file where bolt persists its data").
 		Envar("BOLT_PATH").
+		Default("/tmp/bot.db").
 		StringVar(&config.boltPath)
 
 	a.Flag("consul.url", "The URL that's used to connect to the consul store").
 		Envar("CONSUL_URL").
+		Default("localhost:8500").
 		URLVar(&config.consul)
 
+	a.Flag("etcd.url", "The URL that's used to connect to the etcd store").
+		Envar("ETCD_URL").
+		Default("localhost:2379").
+		URLVar(&config.etcd)
+
+	a.Flag("etcd.tls.insecure", "Use TLS or not").
+		Envar("ETCD_TLS_INSECURE").
+		Default("false").
+		BoolVar(&config.etcdInsecure)
+
+	a.Flag("etcd.tls.insecureSkipVerify", "Skip server certificates verification").
+		Envar("ETCD_TLS_INSECURE_SKIP_VERIFY").
+		Default("false").
+		BoolVar(&config.etcdInsecureSkipVerify)
+
+	a.Flag("etcd.tls.cert", "Path to the TLS cert file").
+		Envar("ETCD_TLS_CERT").
+		StringVar(&config.etcdCertFile)
+
+	a.Flag("etcd.tls.key", "Path to the TLS key file").
+		Envar("ETCD_TLS_KEY").
+		StringVar(&config.etcdKeyFile)
+
+	a.Flag("etcd.tls.ca", "Path to the TLS trusted CA cert file").
+		Envar("ETCD_TLS_CACERT").
+		StringVar(&config.etcdCAFile)
+
 	a.Flag("listen.addr", "The address the alertmanager-bot listens on for incoming webhooks").
-		Required().
 		Envar("LISTEN_ADDR").
+		Default("0.0.0.0:8080").
 		StringVar(&config.listenAddr)
 
 	a.Flag("log.json", "Tell the application to log json and not key value pairs").
@@ -100,7 +142,12 @@ func main() {
 	a.Flag("store", "The store to use").
 		Required().
 		Envar("STORE").
-		EnumVar(&config.store, storeBolt, storeConsul)
+		EnumVar(&config.store, storeBolt, storeConsul, storeEtcd)
+
+	a.Flag("storeKeyPrefix", "Prefix for store keys").
+		Default("telegram/chats").
+		Envar("STORE_KEY_PREFIX").
+		StringVar(&config.storeKeyPrefix)
 
 	a.Flag("telegram.admin", "The ID of the initial Telegram Admin").
 		Required().
@@ -114,7 +161,7 @@ func main() {
 
 	a.Flag("template.paths", "The paths to the template").
 		Envar("TEMPLATE_PATHS").
-		Default("./default.tmpl").
+		Default("/templates/default.tmpl").
 		ExistingFilesVar(&config.templatesPaths)
 
 	_, err := a.Parse(os.Args[1:])
@@ -177,8 +224,44 @@ func main() {
 				level.Error(logger).Log("msg", "failed to create consul store backend", "err", err)
 				os.Exit(1)
 			}
+		case storeEtcd:
+			tlsConfig := &tls.Config{}
+
+			if config.etcdCertFile != "" {
+				cert, err := tls.LoadX509KeyPair(config.etcdCertFile, config.etcdKeyFile)
+				if err != nil {
+					level.Error(logger).Log("msg", "failed to create etcd store backend, could not load certificates", "err", err)
+					os.Exit(1)
+				}
+				tlsConfig.Certificates = []tls.Certificate{cert}
+			}
+
+			if config.etcdCAFile != "" {
+				caCert, err := ioutil.ReadFile(config.etcdCAFile)
+				if err != nil {
+					level.Error(logger).Log("msg", "failed to create etcd store backend, could not load ca certificate", "err", err)
+					os.Exit(1)
+				}
+
+				caCertPool := x509.NewCertPool()
+				caCertPool.AppendCertsFromPEM(caCert)
+				tlsConfig.RootCAs = caCertPool
+			}
+
+			tlsConfig.InsecureSkipVerify = config.etcdInsecureSkipVerify
+
+			if !config.etcdInsecure {
+				kvStore, err = etcd.New([]string{config.etcd.String()}, &store.Config{TLS: tlsConfig})
+			} else {
+				kvStore, err = etcd.New([]string{config.etcd.String()}, nil)
+			}
+
+			if err != nil {
+				level.Error(logger).Log("msg", "failed to create etcd store backend", "err", err)
+				os.Exit(1)
+			}
 		default:
-			level.Error(logger).Log("msg", "please provide one of the following supported store backends: bolt, consul")
+			level.Error(logger).Log("msg", "please provide one of the following supported store backends: bolt, consul, etcd")
 			os.Exit(1)
 		}
 	}
@@ -193,7 +276,7 @@ func main() {
 	{
 		tlogger := log.With(logger, "component", "telegram")
 
-		chats, err := telegram.NewChatStore(kvStore)
+		chats, err := telegram.NewChatStore(kvStore, config.storeKeyPrefix)
 		if err != nil {
 			level.Error(logger).Log("msg", "failed to create chat store", "err", err)
 			os.Exit(1)
@@ -260,12 +343,12 @@ func main() {
 			level.Info(wlogger).Log("msg", "starting webserver", "addr", config.listenAddr)
 			return s.ListenAndServe()
 		}, func(err error) {
-			s.Shutdown(context.Background())
+			_ = s.Shutdown(context.Background())
 		})
 	}
 	{
 		sig := make(chan os.Signal)
-		signal.Notify(sig, os.Interrupt, os.Kill)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 
 		g.Add(func() error {
 			<-sig
