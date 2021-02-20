@@ -21,13 +21,11 @@ import (
 	"github.com/docker/libkv/store/etcd"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/hako/durafmt"
 	"github.com/joho/godotenv"
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
 	"github.com/prometheus/alertmanager/notify"
-	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -189,25 +187,7 @@ func main() {
 		"caller", log.DefaultCaller,
 	)
 
-	var tmpl *template.Template
-	{
-		funcs := template.DefaultFuncs
-		funcs["since"] = func(t time.Time) string {
-			return durafmt.Parse(time.Since(t)).String()
-		}
-		funcs["duration"] = func(start time.Time, end time.Time) string {
-			return durafmt.Parse(end.Sub(start)).String()
-		}
-
-		template.DefaultFuncs = funcs
-
-		tmpl, err = template.FromGlobs(config.templatesPaths...)
-		if err != nil {
-			level.Error(logger).Log("msg", "failed to parse templates", "err", err)
-			os.Exit(1)
-		}
-		tmpl.ExternalURL = config.alertmanager
-	}
+	reg := prometheus.NewRegistry()
 
 	var kvStore store.Store
 	{
@@ -285,9 +265,10 @@ func main() {
 		bot, err := telegram.NewBot(
 			chats, config.telegramToken, config.telegramAdmins[0],
 			telegram.WithLogger(tlogger),
+			telegram.WithRegistry(reg),
 			telegram.WithAddr(config.listenAddr),
 			telegram.WithAlertmanager(config.alertmanager),
-			telegram.WithTemplates(tmpl),
+			telegram.WithTemplates(config.alertmanager, config.templatesPaths...),
 			telegram.WithRevision(Revision),
 			telegram.WithStartTime(StartTime),
 			telegram.WithExtraAdmins(config.telegramAdmins[1:]...),
@@ -330,7 +311,7 @@ func main() {
 
 		m := http.NewServeMux()
 		m.HandleFunc("/", alertmanager.HandleWebhook(wlogger, webhooksCounter, webhooks))
-		m.Handle("/metrics", promhttp.Handler())
+		m.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 		m.HandleFunc("/health", handleHealth)
 		m.HandleFunc("/healthz", handleHealth)
 
