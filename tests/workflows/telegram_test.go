@@ -36,10 +36,12 @@ var (
 
 	// These are the different workflows/scenarios we are testing.
 	workflows = []struct {
-		name     string
-		messages []telebot.Message
-		replies  []testTelegramReply
-		logs     []string
+		name               string
+		messages           []telebot.Message
+		replies            []testTelegramReply
+		logs               []string
+		alertmanagerAlerts func() string
+		alertmanagerStatus func() string
 	}{{
 		name: "Dropped",
 		messages: []telebot.Message{{
@@ -102,7 +104,7 @@ var (
 		}},
 		replies: []testTelegramReply{{
 			recipient: "123",
-			message:   telegram.ResponseHelp,
+			message:   strings.TrimSpace(telegram.ResponseHelp),
 		}},
 		logs: []string{
 			"level=debug msg=\"message received\" text=/help",
@@ -148,7 +150,7 @@ var (
 			message:   "Hey, Elliot! I will now keep you up to date!\n/help",
 		}, {
 			recipient: "123",
-			message:   "Currently these chat have subscribed:\n@elliot\n",
+			message:   "Currently these chat have subscribed:\n@elliot",
 		}},
 		logs: []string{
 			"level=debug msg=\"message received\" text=/start",
@@ -168,6 +170,67 @@ var (
 		}},
 		logs: []string{
 			"level=debug msg=\"message received\" text=/status",
+		},
+		alertmanagerStatus: func() string {
+			return fmt.Sprintf(
+				`{"data":{"uptime":%q,"versionInfo":{"version":"alertmanager"}}}"`,
+				time.Now().Add(-time.Minute).Format(time.RFC3339),
+			)
+		},
+	}, {
+		name: "AlertsNone",
+		messages: []telebot.Message{{
+			Sender: admin,
+			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandAlerts,
+		}},
+		replies: []testTelegramReply{{
+			recipient: "123",
+			message:   "No alerts right now! 🎉",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/alerts",
+		},
+	}, {
+		name: "AlertsFiring",
+		messages: []telebot.Message{{
+			Sender: admin,
+			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandAlerts,
+		}},
+		replies: []testTelegramReply{{
+			recipient: "123",
+			message:   "🔥 <b>damn</b> 🔥\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n<b>Duration:</b> 1 hour",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/alerts",
+		},
+		alertmanagerAlerts: func() string {
+			return fmt.Sprintf(
+				`{"status":"success", "data":[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!"},"startsAt":%q}]}`,
+				time.Now().Add(-time.Hour).Format(time.RFC3339),
+			)
+		},
+	}, {
+		name: "AlertsResolved",
+		messages: []telebot.Message{{
+			Sender: admin,
+			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandAlerts,
+		}},
+		replies: []testTelegramReply{{
+			recipient: "123",
+			message:   "✅ <b>damn</b> ✅\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n<b>Duration:</b> 58 minutes\n<b>Ended:</b> 2 minutes",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/alerts",
+		},
+		alertmanagerAlerts: func() string {
+			return fmt.Sprintf(
+				`{"status":"success", "data":[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!"},"startsAt":%q,"endsAt":%q}]}`,
+				time.Now().Add(-time.Hour).Format(time.RFC3339),
+				time.Now().Add(-2*time.Minute).Format(time.RFC3339),
+			)
 		},
 	}}
 )
@@ -233,14 +296,23 @@ func (t *testTelegram) SendMessage(recipient telebot.Recipient, message string, 
 }
 
 func TestWorkflows(t *testing.T) {
+	var testAlertmanagerAlerts func() string
+	var testAlertmanagerStatus func() string
 	var testAlertmanagerURL *url.URL
 	{
 		m := http.NewServeMux()
+		m.HandleFunc("/api/v1/alerts", func(w http.ResponseWriter, r *http.Request) {
+			data := "{}"
+			if testAlertmanagerAlerts != nil {
+				data = testAlertmanagerAlerts()
+			}
+			_, _ = w.Write([]byte(data))
+		})
 		m.HandleFunc("/api/v1/status", func(w http.ResponseWriter, r *http.Request) {
-			data := fmt.Sprintf(
-				`{"data":{"uptime":%q,"versionInfo":{"version":"alertmanager"}}}"`,
-				time.Now().Add(-time.Minute).Format(time.RFC3339),
-			)
+			data := "{}"
+			if testAlertmanagerStatus != nil {
+				data = testAlertmanagerStatus()
+			}
 			_, _ = w.Write([]byte(data))
 		})
 
@@ -252,6 +324,9 @@ func TestWorkflows(t *testing.T) {
 
 	for _, w := range workflows {
 		t.Run(w.name, func(t *testing.T) {
+			testAlertmanagerAlerts = w.alertmanagerAlerts
+			testAlertmanagerStatus = w.alertmanagerStatus
+
 			ctx, cancel := context.WithCancel(context.Background())
 			logs := &bytes.Buffer{}
 
@@ -261,6 +336,7 @@ func TestWorkflows(t *testing.T) {
 			bot, err := telegram.NewBotWithTelegram(testStore, testTelegram, admin.ID,
 				telegram.WithLogger(log.NewLogfmtLogger(logs)),
 				telegram.WithAlertmanager(testAlertmanagerURL),
+				telegram.WithTemplates(&url.URL{Host: "localhost"}, "../../default.tmpl"),
 				telegram.WithStartTime(time.Now().Add(-time.Minute)),
 				telegram.WithRevision("bot"),
 			)
@@ -268,8 +344,7 @@ func TestWorkflows(t *testing.T) {
 
 			// Run the bot in the background and tests in foreground.
 			go func(ctx context.Context) {
-				err = bot.Run(ctx, make(chan notify.WebhookMessage))
-				require.NoError(t, err)
+				require.NoError(t, bot.Run(ctx, make(chan notify.WebhookMessage)))
 			}(ctx)
 
 			// TODO: Don't sleep but block somehow different
@@ -278,7 +353,7 @@ func TestWorkflows(t *testing.T) {
 			require.Len(t, testTelegram.replies, len(w.replies))
 			for i, reply := range w.replies {
 				require.Equal(t, reply.recipient, testTelegram.replies[i].recipient)
-				require.Equal(t, reply.message, testTelegram.replies[i].message)
+				require.Equal(t, reply.message, strings.TrimSpace(testTelegram.replies[i].message))
 			}
 
 			logLines := strings.Split(strings.TrimSpace(logs.String()), "\n")
