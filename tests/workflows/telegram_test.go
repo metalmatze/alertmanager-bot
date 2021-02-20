@@ -3,6 +3,10 @@ package workflows
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -49,8 +53,8 @@ var (
 		name: "Incomprehensible",
 		messages: []telebot.Message{{
 			Sender: admin,
-			Text:   "/incomprehensible",
 			Chat:   chatFromUser(admin),
+			Text:   "/incomprehensible",
 		}},
 		replies: []testTelegramReply{{
 			recipient: "123",
@@ -63,8 +67,8 @@ var (
 		name: "Start",
 		messages: []telebot.Message{{
 			Sender: admin,
-			Text:   telegram.CommandStart,
 			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandStart,
 		}},
 		replies: []testTelegramReply{{
 			recipient: "123",
@@ -78,8 +82,8 @@ var (
 		name: "StopWithoutStart",
 		messages: []telebot.Message{{
 			Sender: admin,
-			Text:   telegram.CommandStop,
 			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandStop,
 		}},
 		replies: []testTelegramReply{{
 			recipient: "123",
@@ -93,8 +97,8 @@ var (
 		name: "Help",
 		messages: []telebot.Message{{
 			Sender: admin,
-			Text:   telegram.CommandHelp,
 			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandHelp,
 		}},
 		replies: []testTelegramReply{{
 			recipient: "123",
@@ -107,8 +111,8 @@ var (
 		name: "HelpAsNobody",
 		messages: []telebot.Message{{
 			Sender: nobody,
-			Text:   telegram.CommandHelp,
 			Chat:   chatFromUser(nobody),
+			Text:   telegram.CommandHelp,
 		}},
 		replies: []testTelegramReply{},
 		logs: []string{
@@ -118,8 +122,8 @@ var (
 		name: "ChatsNone",
 		messages: []telebot.Message{{
 			Sender: admin,
-			Text:   telegram.CommandChats,
 			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandChats,
 		}},
 		replies: []testTelegramReply{{
 			recipient: "123",
@@ -132,12 +136,12 @@ var (
 		name: "ChatsWithAdminSubscribed",
 		messages: []telebot.Message{{
 			Sender: admin,
-			Text:   telegram.CommandStart,
 			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandStart,
 		}, {
 			Sender: admin,
-			Text:   telegram.CommandChats,
 			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandChats,
 		}},
 		replies: []testTelegramReply{{
 			recipient: "123",
@@ -150,6 +154,20 @@ var (
 			"level=debug msg=\"message received\" text=/start",
 			"level=info msg=\"user subscribed\" username=elliot user_id=123",
 			"level=debug msg=\"message received\" text=/chats",
+		},
+	}, {
+		name: "Status",
+		messages: []telebot.Message{{
+			Sender: admin,
+			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandStatus,
+		}},
+		replies: []testTelegramReply{{
+			recipient: "123",
+			message:   "*AlertManager*\nVersion: alertmanager\nUptime: 1 minute\n*AlertManager Bot*\nVersion: bot\nUptime: 1 minute",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/status",
 		},
 	}}
 )
@@ -215,6 +233,23 @@ func (t *testTelegram) SendMessage(recipient telebot.Recipient, message string, 
 }
 
 func TestWorkflows(t *testing.T) {
+	var testAlertmanagerURL *url.URL
+	{
+		m := http.NewServeMux()
+		m.HandleFunc("/api/v1/status", func(w http.ResponseWriter, r *http.Request) {
+			data := fmt.Sprintf(
+				`{"data":{"uptime":%q,"versionInfo":{"version":"alertmanager"}}}"`,
+				time.Now().Add(-time.Minute).Format(time.RFC3339),
+			)
+			_, _ = w.Write([]byte(data))
+		})
+
+		server := httptest.NewServer(m)
+		defer server.Close()
+
+		testAlertmanagerURL, _ = url.Parse(server.URL)
+	}
+
 	for _, w := range workflows {
 		t.Run(w.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
@@ -225,6 +260,9 @@ func TestWorkflows(t *testing.T) {
 
 			bot, err := telegram.NewBotWithTelegram(testStore, testTelegram, admin.ID,
 				telegram.WithLogger(log.NewLogfmtLogger(logs)),
+				telegram.WithAlertmanager(testAlertmanagerURL),
+				telegram.WithStartTime(time.Now().Add(-time.Minute)),
+				telegram.WithRevision("bot"),
 			)
 			require.NoError(t, err)
 
