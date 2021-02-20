@@ -76,7 +76,7 @@ type Bot struct {
 }
 
 // BotOption passed to NewBot to change the default instance.
-type BotOption func(b *Bot)
+type BotOption func(b *Bot) error
 
 // NewBot creates a Bot with the UserStore and telegram telegram.
 func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bot, error) {
@@ -107,7 +107,9 @@ func NewBotWithTelegram(chats BotChatStore, bot Telebot, admin int, opts ...BotO
 	}
 
 	for _, opt := range opts {
-		opt(b)
+		if err := opt(b); err != nil {
+			return nil, err
+		}
 	}
 
 	return b, nil
@@ -115,59 +117,83 @@ func NewBotWithTelegram(chats BotChatStore, bot Telebot, admin int, opts ...BotO
 
 // WithLogger sets the logger for the Bot as an option.
 func WithLogger(l log.Logger) BotOption {
-	return func(b *Bot) {
+	return func(b *Bot) error {
 		b.logger = l
+		return nil
 	}
 }
 
 // WithRegistry registers the Bot's metrics with the passed prometheus.Registry.
 func WithRegistry(r *prometheus.Registry) BotOption {
-	return func(b *Bot) {
-		r.MustRegister(b.commandsCounter)
+	return func(b *Bot) error {
+		return r.Register(b.commandsCounter)
 	}
 }
 
 // WithAddr sets the internal listening addr of the bot's web server receiving webhooks.
 func WithAddr(addr string) BotOption {
-	return func(b *Bot) {
+	return func(b *Bot) error {
 		b.addr = addr
+		return nil
 	}
 }
 
 // WithAlertmanager sets the connection url for the Alertmanager.
 func WithAlertmanager(u *url.URL) BotOption {
-	return func(b *Bot) {
+	return func(b *Bot) error {
 		b.alertmanager = u
+		return nil
 	}
 }
 
 // WithTemplates uses Alertmanager template to render messages for Telegram.
-func WithTemplates(t *template.Template) BotOption {
-	return func(b *Bot) {
-		b.templates = t
+func WithTemplates(alertmanager *url.URL, templatePaths ...string) BotOption {
+	return func(b *Bot) error {
+		funcs := template.DefaultFuncs
+		funcs["since"] = func(t time.Time) string {
+			return durafmt.Parse(time.Since(t)).String()
+		}
+		funcs["duration"] = func(start time.Time, end time.Time) string {
+			return durafmt.Parse(end.Sub(start)).String()
+		}
+
+		template.DefaultFuncs = funcs
+
+		tmpl, err := template.FromGlobs(templatePaths...)
+		if err != nil {
+			return err
+		}
+
+		tmpl.ExternalURL = alertmanager
+		b.templates = tmpl
+
+		return nil
 	}
 }
 
 // WithRevision is setting the Bot's revision for status commands.
 func WithRevision(r string) BotOption {
-	return func(b *Bot) {
+	return func(b *Bot) error {
 		b.revision = r
+		return nil
 	}
 }
 
 // WithStartTime is setting the Bot's start time for status commands.
 func WithStartTime(st time.Time) BotOption {
-	return func(b *Bot) {
+	return func(b *Bot) error {
 		b.startTime = st
+		return nil
 	}
 }
 
 // WithExtraAdmins allows the specified additional user IDs to issue admin
 // commands to the bot.
 func WithExtraAdmins(ids ...int) BotOption {
-	return func(b *Bot) {
+	return func(b *Bot) error {
 		b.admins = append(b.admins, ids...)
 		sort.Ints(b.admins)
+		return nil
 	}
 }
 
@@ -411,6 +437,7 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 
 	out, err := b.tmplAlerts(alerts...)
 	if err != nil {
+		level.Warn(b.logger).Log("msg", "failed to template alerts", "err", err)
 		return
 	}
 
