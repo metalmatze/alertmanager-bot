@@ -4,8 +4,9 @@
 <b>Labels:</b>
     {{ range $key, $value := .Labels }}{{ if ne $key "alertname" }}{{ $key }}: {{ $value }}{{ end }}{{ end }}
 <b>Annotations:</b>
-    {{ range $key, $value := .Annotations }}{{ $key }}: {{ $value }}{{ end }}
-<b>Duration:</b> {{ duration .StartsAt .EndsAt }}{{ if ne .Status "firing"}}
+    {{ range $key, $value := .Annotations }}{{ $key }}: {{ $value }}{{ end }}{{ if eq .Status "firing"}}
+<b>Duration:</b> {{ since .StartsAt }}{{ else }}
+<b>Duration:</b> {{ duration .StartsAt .EndsAt }}
 <b>Ended:</b> {{ .EndsAt | since }}{{ end }}
 {{ end }}
 {{ end }}
