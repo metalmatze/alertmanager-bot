@@ -158,6 +158,34 @@ var (
 			"level=debug msg=\"message received\" text=/chats",
 		},
 	}, {
+		name: "IDAsNobody",
+		messages: []telebot.Message{{
+			Sender: nobody,
+			Chat:   chatFromUser(nobody),
+			Text:   telegram.CommandID,
+		}},
+		replies: []testTelegramReply{{
+			recipient: "222",
+			message:   "Your Telegram ID is 222",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/id",
+		},
+	}, {
+		name: "IDAsAdmin",
+		messages: []telebot.Message{{
+			Sender: admin,
+			Chat:   chatFromUser(admin),
+			Text:   telegram.CommandID,
+		}},
+		replies: []testTelegramReply{{
+			recipient: "123",
+			message:   "Your Telegram ID is 123",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/id",
+		},
+	}, {
 		name: "Status",
 		messages: []telebot.Message{{
 			Sender: admin,
