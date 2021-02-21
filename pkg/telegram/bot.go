@@ -25,6 +25,7 @@ const (
 	CommandStop  = "/stop"
 	CommandHelp  = "/help"
 	CommandChats = "/chats"
+	CommandID    = "/id"
 
 	CommandStatus   = "/status"
 	CommandAlerts   = "/alerts"
@@ -43,6 +44,7 @@ Available commands:
 ` + CommandAlerts + ` - List all alerts.
 ` + CommandSilences + ` - List all silences.
 ` + CommandChats + ` - List all users and group chats that subscribed.
+` + CommandID + ` - Send the senders Telegram ID (works for all Telegram users).
 `
 )
 
@@ -217,6 +219,7 @@ func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) er
 		CommandStop:     b.handleStop,
 		CommandHelp:     b.handleHelp,
 		CommandChats:    b.handleChats,
+		CommandID:       b.handleID,
 		CommandStatus:   b.handleStatus,
 		CommandAlerts:   b.handleAlerts,
 		CommandSilences: b.handleSilences,
@@ -232,7 +235,12 @@ func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) er
 			return nil
 		}
 
-		if !b.isAdminID(message.Sender.ID) {
+		// TODO: Remove the command suffix from the text, /help@BotName => /help
+		//text := strings.Replace(message.Text, commandSuffix, "", -1)
+		// Only take the first part into account, /help foo => /help
+		text := strings.Split(message.Text, " ")[0]
+
+		if !b.isAdminID(message.Sender.ID) && text != CommandID {
 			b.commandsCounter.WithLabelValues("dropped").Inc()
 			return fmt.Errorf("dropped message from forbidden sender")
 		}
@@ -240,11 +248,6 @@ func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) er
 		if err := b.telegram.SendChatAction(message.Chat, telebot.Typing); err != nil {
 			return err
 		}
-
-		// TODO: Remove the command suffix from the text, /help@BotName => /help
-		//text := strings.Replace(message.Text, commandSuffix, "", -1)
-		// Only take the first part into account, /help foo => /help
-		text := strings.Split(message.Text, " ")[0]
 
 		level.Debug(b.logger).Log("msg", "message received", "text", text)
 
@@ -397,6 +400,10 @@ func (b *Bot) handleChats(message telebot.Message) {
 	}
 
 	_ = b.telegram.SendMessage(message.Chat, "Currently these chat have subscribed:\n"+list, nil)
+}
+
+func (b *Bot) handleID(message telebot.Message) {
+	_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf("Your Telegram ID is %d", message.Sender.ID), nil)
 }
 
 func (b *Bot) handleStatus(message telebot.Message) {
