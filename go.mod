@@ -11,11 +11,11 @@ require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/OneOfOne/xxhash v1.2.5 // indirect
+	github.com/alecthomas/kong v0.2.15 // indirect
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 // indirect
 	github.com/aws/aws-sdk-go v1.37.15 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
-	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/circonus-labs/circonusllhist v0.1.4 // indirect
 	github.com/cncf/udpa/go v0.0.0-20210210032658-bff43e8824d0 // indirect
@@ -58,7 +58,6 @@ require (
 	github.com/hashicorp/raft-boltdb v0.0.0-20191021154308-4207f1bf0617 // indirect
 	github.com/hashicorp/uuid v0.0.0-20160311170451-ebb0a03e909c // indirect
 	github.com/infobloxopen/go-trees v0.0.0-20190313150506-2af4e13f9062 // indirect
-	github.com/joho/godotenv v1.3.0
 	github.com/joyent/triton-go v1.8.5 // indirect
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -109,7 +108,6 @@ require (
 	google.golang.org/grpc/examples v0.0.0-20210218181225-26c143bd5f59 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.28.0 // indirect
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
