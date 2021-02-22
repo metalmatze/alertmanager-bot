@@ -11,7 +11,7 @@ require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/OneOfOne/xxhash v1.2.5 // indirect
-	github.com/alecthomas/kong v0.2.15 // indirect
+	github.com/alecthomas/kong v0.2.15
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 // indirect
 	github.com/aws/aws-sdk-go v1.37.15 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -90,7 +90,7 @@ require (
 	github.com/stretchr/objx v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/tencentcloud/tencentcloud-sdk-go v3.0.233+incompatible // indirect
-	github.com/tucnak/telebot v0.0.0-20170912115553-00cebf376d79
+	github.com/tucnak/telebot v0.0.0-20170912115553-00cebf376d79 // indirect
 	github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c // indirect
 	github.com/vmware/govmomi v0.24.0 // indirect
 	github.com/weaveworks/mesh v0.0.0-20160126163632-f74318fb713b // indirect
@@ -109,6 +109,7 @@ require (
 	gopkg.in/DataDog/dd-trace-go.v1 v1.28.0 // indirect
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
+	gopkg.in/tucnak/telebot.v2 v2.3.6-0.20210222174923-66cc553e4d2d
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
