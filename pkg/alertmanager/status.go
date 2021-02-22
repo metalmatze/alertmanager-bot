@@ -1,43 +1,17 @@
 package alertmanager
 
 import (
-	"encoding/json"
-	"net/http"
-	"time"
+	"context"
 
-	"github.com/go-kit/kit/log"
+	"github.com/prometheus/alertmanager/api/v2/client/general"
+	"github.com/prometheus/alertmanager/api/v2/models"
 )
 
-// StatusResponse is the data returned by Alertmanager about its current status.
-type StatusResponse struct {
-	Status string `json:"status"`
-	Data   struct {
-		Uptime      time.Time `json:"uptime"`
-		VersionInfo struct {
-			Branch    string `json:"branch"`
-			BuildDate string `json:"buildDate"`
-			BuildUser string `json:"buildUser"`
-			GoVersion string `json:"goVersion"`
-			Revision  string `json:"revision"`
-			Version   string `json:"version"`
-		} `json:"versionInfo"`
-	} `json:"data"`
-}
-
-// Status returns a StatusResponse or an error.
-func Status(logger log.Logger, alertmanagerURL string) (StatusResponse, error) {
-	var statusResponse StatusResponse
-
-	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/status")
+func (c Client) Status(ctx context.Context) (*models.AlertmanagerStatus, error) {
+	status, err := c.alertmanager.General.GetStatus(general.NewGetStatusParams().WithContext(ctx))
 	if err != nil {
-		return statusResponse, err
+		return nil, err
 	}
 
-	dec := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
-	if err := dec.Decode(&statusResponse); err != nil {
-		return statusResponse, err
-	}
-
-	return statusResponse, nil
+	return status.Payload, nil
 }
