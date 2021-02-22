@@ -13,7 +13,8 @@ import (
 	"github.com/hako/durafmt"
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/oklog/run"
-	"github.com/prometheus/alertmanager/notify"
+	"github.com/prometheus/alertmanager/api/v2/models"
+	"github.com/prometheus/alertmanager/notify/webhook"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -59,11 +60,17 @@ type Telebot interface {
 	SendMessage(recipient telebot.Recipient, message string, options *telebot.SendOptions) error
 }
 
+type Alertmanager interface {
+	ListAlerts(context.Context) ([]*types.Alert, error)
+	ListSilences(context.Context) ([]*types.Silence, error)
+	Status(context.Context) (*models.AlertmanagerStatus, error)
+}
+
 // Bot runs the alertmanager telegram.
 type Bot struct {
 	addr         string
 	admins       []int // must be kept sorted
-	alertmanager *url.URL
+	alertmanager Alertmanager
 	templates    *template.Template
 	chats        BotChatStore
 	logger       log.Logger
@@ -90,9 +97,8 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 
 func NewBotWithTelegram(chats BotChatStore, bot Telebot, admin int, opts ...BotOption) (*Bot, error) {
 	commandsCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: "alertmanagerbot",
-		Name:      "commands_total",
-		Help:      "Number of commands received by command name",
+		Name: "alertmanagerbot_commands_total",
+		Help: "Number of commands received by command name",
 	}, []string{"command"})
 
 	b := &Bot{
@@ -101,7 +107,6 @@ func NewBotWithTelegram(chats BotChatStore, bot Telebot, admin int, opts ...BotO
 		chats:           chats,
 		addr:            "127.0.0.1:8080",
 		admins:          []int{admin},
-		alertmanager:    &url.URL{Host: "localhost:9093"},
 		commandsCounter: commandsCounter,
 		// TODO: initialize templates with default?
 	}
@@ -138,10 +143,9 @@ func WithAddr(addr string) BotOption {
 	}
 }
 
-// WithAlertmanager sets the connection url for the Alertmanager.
-func WithAlertmanager(u *url.URL) BotOption {
+func WithAlertmanager(alertmanager Alertmanager) BotOption {
 	return func(b *Bot) error {
-		b.alertmanager = u
+		b.alertmanager = alertmanager
 		return nil
 	}
 }
@@ -209,7 +213,7 @@ func (b *Bot) isAdminID(id int) bool {
 }
 
 // Run the telegram and listen to messages send to the telegram.
-func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) error {
+func (b *Bot) Run(ctx context.Context, webhooks <-chan webhook.Message) error {
 	//commandSuffix := fmt.Sprintf("@%s", b.telegram.Identity().Username)
 
 	commands := map[string]func(message telebot.Message){
@@ -302,7 +306,7 @@ func (b *Bot) Run(ctx context.Context, webhooks <-chan notify.WebhookMessage) er
 }
 
 // sendWebhook sends messages received via webhook to all subscribed chats.
-func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan notify.WebhookMessage) error {
+func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan webhook.Message) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -400,21 +404,21 @@ func (b *Bot) handleChats(message telebot.Message) {
 }
 
 func (b *Bot) handleStatus(message telebot.Message) {
-	s, err := alertmanager.Status(b.logger, b.alertmanager.String())
+	status, err := b.alertmanager.Status(context.TODO())
 	if err != nil {
 		level.Warn(b.logger).Log("msg", "failed to get status", "err", err)
 		_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to get status... %v", err), nil)
 		return
 	}
 
-	uptime := durafmt.Parse(time.Since(s.Data.Uptime))
+	uptime := durafmt.Parse(time.Since(time.Time(*status.Uptime)))
 	uptimeBot := durafmt.Parse(time.Since(b.startTime))
 
 	_ = b.telegram.SendMessage(
 		message.Chat,
 		fmt.Sprintf(
 			"*AlertManager*\nVersion: %s\nUptime: %s\n*AlertManager Bot*\nVersion: %s\nUptime: %s",
-			s.Data.VersionInfo.Version,
+			*status.VersionInfo.Version,
 			uptime,
 			b.revision,
 			uptimeBot,
@@ -424,8 +428,9 @@ func (b *Bot) handleStatus(message telebot.Message) {
 }
 
 func (b *Bot) handleAlerts(message telebot.Message) {
-	alerts, err := alertmanager.ListAlerts(b.logger, b.alertmanager.String())
+	alerts, err := b.alertmanager.ListAlerts(context.TODO())
 	if err != nil {
+		level.Warn(b.logger).Log("msg", "failed to list alerts", "err", err)
 		_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list alerts... %v", err), nil)
 		return
 	}
@@ -450,7 +455,7 @@ func (b *Bot) handleAlerts(message telebot.Message) {
 }
 
 func (b *Bot) handleSilences(message telebot.Message) {
-	silences, err := alertmanager.ListSilences(b.logger, b.alertmanager.String())
+	silences, err := b.alertmanager.ListSilences(context.TODO())
 	if err != nil {
 		_ = b.telegram.SendMessage(message.Chat, fmt.Sprintf("failed to list silences... %v", err), nil)
 		return

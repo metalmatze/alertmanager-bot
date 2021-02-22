@@ -1,31 +1,52 @@
 package alertmanager
 
 import (
-	"encoding/json"
-	"net/http"
+	"context"
+	"time"
 
-	"github.com/go-kit/kit/log"
+	"github.com/prometheus/alertmanager/api/v2/client/alert"
 	"github.com/prometheus/alertmanager/types"
+	"github.com/prometheus/common/model"
 )
 
-type alertResponse struct {
-	Status string         `json:"status"`
-	Alerts []*types.Alert `json:"data,omitempty"`
-}
-
-// ListAlerts returns a slice of Alert and an error.
-func ListAlerts(logger log.Logger, alertmanagerURL string) ([]*types.Alert, error) {
-	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/alerts")
+func (c *Client) ListAlerts(ctx context.Context) ([]*types.Alert, error) {
+	getAlerts, err := c.alertmanager.Alert.GetAlerts(alert.NewGetAlertsParams().WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
 
-	var alertResponse alertResponse
-	dec := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
-	if err := dec.Decode(&alertResponse); err != nil {
-		return nil, err
+	alerts := make([]*types.Alert, 0, len(getAlerts.Payload))
+	for _, a := range getAlerts.Payload {
+		labels := make(model.LabelSet, len(a.Labels))
+		for name, value := range a.Labels {
+			labels[model.LabelName(name)] = model.LabelValue(value)
+		}
+		annotations := make(model.LabelSet, len(a.Annotations))
+		for name, value := range a.Annotations {
+			annotations[model.LabelName(name)] = model.LabelValue(value)
+		}
+
+		endsAt := time.Time{}
+		if a.EndsAt != nil {
+			endsAt = time.Time(*a.EndsAt)
+		}
+		updatedAt := time.Time{}
+		if a.UpdatedAt != nil {
+			updatedAt = time.Time(*a.UpdatedAt)
+		}
+
+		alerts = append(alerts, &types.Alert{
+			Alert: model.Alert{
+				Labels:       labels,
+				Annotations:  annotations,
+				StartsAt:     time.Time(*a.StartsAt),
+				EndsAt:       endsAt,
+				GeneratorURL: a.GeneratorURL.String(),
+			},
+			UpdatedAt: updatedAt,
+			Timeout:   false,
+		})
 	}
 
-	return alertResponse.Alerts, err
+	return alerts, nil
 }

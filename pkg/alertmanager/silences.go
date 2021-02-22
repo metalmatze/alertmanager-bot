@@ -1,47 +1,52 @@
 package alertmanager
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
-	"sort"
 	"strings"
 	"time"
 
-	"github.com/go-kit/kit/log"
 	"github.com/hako/durafmt"
+	"github.com/prometheus/alertmanager/api/v2/client/silence"
 	"github.com/prometheus/alertmanager/types"
 )
 
-type silencesResponse struct {
-	Data   []types.Silence `json:"data"`
-	Status string          `json:"status"`
-}
-
-// ListSilences returns a slice of Silence and an error.
-func ListSilences(logger log.Logger, alertmanagerURL string) ([]types.Silence, error) {
-	resp, err := httpRetry(logger, http.MethodGet, alertmanagerURL+"/api/v1/silences")
+func (c *Client) ListSilences(ctx context.Context) ([]*types.Silence, error) {
+	getSilences, err := c.alertmanager.Silence.GetSilences(silence.NewGetSilencesParams().WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
 
-	var silencesResponse silencesResponse
-	dec := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
-	if err := dec.Decode(&silencesResponse); err != nil {
-		return nil, err
+	silences := make([]*types.Silence, 0, len(getSilences.Payload))
+	for _, s := range getSilences.Payload {
+		var matchers = make([]*types.Matcher, 0, len(s.Matchers))
+		for _, m := range matchers {
+			matchers = append(matchers, &types.Matcher{
+				Name:    m.Name,
+				Value:   m.Value,
+				IsRegex: m.IsRegex,
+			})
+		}
+
+		silences = append(silences, &types.Silence{
+			ID:        *s.ID,
+			StartsAt:  time.Time(*s.StartsAt),
+			EndsAt:    time.Time(*s.EndsAt),
+			UpdatedAt: time.Time(*s.UpdatedAt),
+			CreatedBy: *s.CreatedBy,
+			Comment:   *s.Comment,
+			Matchers:  matchers,
+			Status: types.SilenceStatus{
+				State: types.SilenceState(*s.Status.State),
+			},
+		})
 	}
 
-	silences := silencesResponse.Data
-	sort.Slice(silences, func(i, j int) bool {
-		return silences[i].EndsAt.After(silences[j].EndsAt)
-	})
-
-	return silences, err
+	return silences, nil
 }
 
 // SilenceMessage converts a silences to a message string.
-func SilenceMessage(s types.Silence) string {
+func SilenceMessage(s *types.Silence) string {
 	var alertname, emoji, matchers, duration string
 
 	for _, m := range s.Matchers {
@@ -77,7 +82,7 @@ func SilenceMessage(s types.Silence) string {
 }
 
 // Resolved returns if a silence is resolved by EndsAt.
-func Resolved(s types.Silence) bool {
+func Resolved(s *types.Silence) bool {
 	if s.EndsAt.IsZero() {
 		return false
 	}

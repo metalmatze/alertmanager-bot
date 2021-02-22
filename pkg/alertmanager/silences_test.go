@@ -9,7 +9,7 @@ import (
 )
 
 func TestResolved(t *testing.T) {
-	s := types.Silence{}
+	s := &types.Silence{}
 	assert.False(t, Resolved(s))
 
 	s.EndsAt = time.Now().Add(time.Minute)

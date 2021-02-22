@@ -25,7 +25,7 @@ import (
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
-	"github.com/prometheus/alertmanager/notify"
+	"github.com/prometheus/alertmanager/notify/webhook"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -189,6 +189,16 @@ func main() {
 
 	reg := prometheus.NewRegistry()
 
+	var am *alertmanager.Client
+	{
+		client, err := alertmanager.NewClient(config.alertmanager)
+		if err != nil {
+			level.Error(logger).Log("msg", "failed to create alertmanager client", "err", err)
+			os.Exit(1)
+		}
+		am = client
+	}
+
 	var kvStore store.Store
 	{
 		switch strings.ToLower(config.store) {
@@ -250,7 +260,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// TODO Needs fan out for multiple bots
-	webhooks := make(chan notify.WebhookMessage, 32)
+	webhooks := make(chan webhook.Message, 32)
 
 	var g run.Group
 	{
@@ -267,7 +277,7 @@ func main() {
 			telegram.WithLogger(tlogger),
 			telegram.WithRegistry(reg),
 			telegram.WithAddr(config.listenAddr),
-			telegram.WithAlertmanager(config.alertmanager),
+			telegram.WithAlertmanager(am),
 			telegram.WithTemplates(config.alertmanager, config.templatesPaths...),
 			telegram.WithRevision(Revision),
 			telegram.WithStartTime(StartTime),
@@ -307,7 +317,7 @@ func main() {
 			Help:      "Number of webhooks received by this bot",
 		})
 
-		prometheus.MustRegister(webhooksCounter)
+		reg.MustRegister(webhooksCounter)
 
 		m := http.NewServeMux()
 		m.HandleFunc("/", alertmanager.HandleWebhook(wlogger, webhooksCounter, webhooks))
