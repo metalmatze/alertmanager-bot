@@ -258,14 +258,14 @@ var (
 		}},
 		replies: []reply{{
 			recipient: "123",
-			message:   "🔥 <b>damn</b> 🔥\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n<b>Duration:</b> 1 hour",
+			message:   "🔥 <b>damn</b> 🔥\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n    runbook: https://example.com/runbook\n<b>Duration:</b> 1 hour",
 		}},
 		logs: []string{
 			"level=debug msg=\"message received\" text=/alerts",
 		},
 		alertmanagerAlerts: func() string {
 			return fmt.Sprintf(
-				`[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!"},"startsAt":%q}]`,
+				`[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!","runbook":"https://example.com/runbook"},"startsAt":"%s"}]`,
 				time.Now().Add(-time.Hour).Format(time.RFC3339),
 			)
 		},
