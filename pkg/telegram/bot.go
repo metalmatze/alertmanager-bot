@@ -13,8 +13,8 @@ import (
 	"github.com/hako/durafmt"
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/oklog/run"
+	"github.com/pkg/errors"
 	"github.com/prometheus/alertmanager/api/v2/models"
-	"github.com/prometheus/alertmanager/notify/webhook"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,9 +32,10 @@ const (
 	CommandAlerts   = "/alerts"
 	CommandSilences = "/silences"
 
-	responseStart = "Hey, %s! I will now keep you up to date!\n" + CommandHelp
-	responseStop  = "Alright, %s! I won't talk to you again.\n" + CommandHelp
-	ResponseHelp  = `
+	responseStartPrivate = "Hey, %s! I will now keep you up to date!\n" + CommandHelp
+	responseStartGroup   = "Hey! I will now keep you all up to date!\n" + CommandHelp
+	responseStop         = "Alright, %s! I won't talk to you again.\n" + CommandHelp
+	ResponseHelp         = `
 I'm a Prometheus AlertManager Bot for Telegram. I will notify you about alerts.
 You can also ask me about my ` + CommandStatus + `, ` + CommandAlerts + ` & ` + CommandSilences + `
 
@@ -52,9 +53,13 @@ Available commands:
 // BotChatStore is all the Bot needs to store and read.
 type BotChatStore interface {
 	List() ([]*telebot.Chat, error)
+	Get(telebot.ChatID) (*telebot.Chat, error)
 	Add(*telebot.Chat) error
 	Remove(*telebot.Chat) error
 }
+
+// ChatNotFoundErr returned by the store if a chat isn't found.
+var ChatNotFoundErr = errors.New("chat not found in store")
 
 type Telebot interface {
 	Start()
@@ -224,7 +229,7 @@ func (b *Bot) isAdminID(id int) bool {
 }
 
 // Run the telegram and listen to messages send to the telegram.
-func (b *Bot) Run(ctx context.Context, webhooks <-chan webhook.Message) error {
+func (b *Bot) Run(ctx context.Context, webhooks <-chan alertmanager.TelegramWebhook) error {
 	b.telegram.Handle(CommandStart, b.middleware(b.handleStart))
 	b.telegram.Handle(CommandStop, b.middleware(b.handleStop))
 	b.telegram.Handle(CommandHelp, b.middleware(b.handleHelp))
@@ -254,26 +259,29 @@ func (b *Bot) Run(ctx context.Context, webhooks <-chan webhook.Message) error {
 }
 
 // sendWebhook sends messages received via webhook to all subscribed chats.
-func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan webhook.Message) error {
+func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan alertmanager.TelegramWebhook) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case w := <-webhooks:
-			chats, err := b.chats.List()
+			chat, err := b.chats.Get(telebot.ChatID(w.ChatID))
 			if err != nil {
-				level.Error(b.logger).Log("msg", "failed to get chat list from store", "err", err)
-				continue
+				if errors.Is(err, ChatNotFoundErr) {
+					level.Warn(b.logger).Log("msg", "chat is not subscribed for alerts", "chat_id", w.ChatID, "err", err)
+					continue
+				}
+				return err
 			}
 
 			data := &template.Data{
-				Receiver:          w.Receiver,
-				Status:            w.Status,
-				Alerts:            w.Alerts,
-				GroupLabels:       w.GroupLabels,
-				CommonLabels:      w.CommonLabels,
-				CommonAnnotations: w.CommonAnnotations,
-				ExternalURL:       w.ExternalURL,
+				Receiver:          w.Message.Receiver,
+				Status:            w.Message.Status,
+				Alerts:            w.Message.Alerts,
+				GroupLabels:       w.Message.GroupLabels,
+				CommonLabels:      w.Message.CommonLabels,
+				CommonAnnotations: w.Message.CommonAnnotations,
+				ExternalURL:       w.Message.ExternalURL,
 			}
 
 			out, err := b.templates.ExecuteHTMLString(`{{ template "telegram.default" . }}`, data)
@@ -282,11 +290,10 @@ func (b *Bot) sendWebhook(ctx context.Context, webhooks <-chan webhook.Message) 
 				continue
 			}
 
-			for _, chat := range chats {
-				_, err = b.telegram.Send(chat, b.truncateMessage(out), &telebot.SendOptions{ParseMode: telebot.ModeHTML})
-				if err != nil {
-					level.Warn(b.logger).Log("msg", "failed to send message to subscribed chat", "err", err)
-				}
+			_, err = b.telegram.Send(chat, b.truncateMessage(out), &telebot.SendOptions{ParseMode: telebot.ModeHTML})
+			if err != nil {
+				level.Warn(b.logger).Log("msg", "failed to send message with alerts", "err", err)
+				continue
 			}
 		}
 	}
@@ -320,13 +327,20 @@ func (b *Bot) handleStart(message *telebot.Message) error {
 		return err
 	}
 
-	_, err := b.telegram.Send(message.Chat, fmt.Sprintf(responseStart, message.Sender.FirstName))
 	level.Info(b.logger).Log(
 		"msg", "user subscribed",
 		"username", message.Sender.Username,
 		"user_id", message.Sender.ID,
+		"chat_id", message.Chat.ID,
 	)
-	return err
+
+	if message.Chat.Type == telebot.ChatPrivate {
+		_, err := b.telegram.Send(message.Chat, fmt.Sprintf(responseStartPrivate, message.Sender.FirstName))
+		return err
+	} else {
+		_, err := b.telegram.Send(message.Chat, responseStartGroup)
+		return err
+	}
 }
 
 func (b *Bot) handleStop(message *telebot.Message) error {
@@ -365,12 +379,11 @@ func (b *Bot) handleChats(message *telebot.Message) error {
 
 	list := ""
 	for _, chat := range chats {
-		// TODO
-		//if chat.IsGroupChat() {
-		//	list = list + fmt.Sprintf("@%s\n", chat.Title)
-		//} else {
-		list = list + fmt.Sprintf("@%s\n", chat.Username)
-		//}
+		if chat.Type == telebot.ChatGroup {
+			list = list + fmt.Sprintf("@%s\n", chat.Title)
+		} else {
+			list = list + fmt.Sprintf("@%s\n", chat.Username)
+		}
 	}
 
 	_, err = b.telegram.Send(message.Chat, "Currently these chat have subscribed:\n"+list)

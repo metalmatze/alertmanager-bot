@@ -20,9 +20,9 @@ const validWebhook = `{"receiver":"telegram","status":"firing","alerts":[{"statu
 func TestHandleWebhook(t *testing.T) {
 	logger := log.NewNopLogger()
 	counter := prometheus.NewCounter(prometheus.CounterOpts{})
-	webhooks := make(chan webhook.Message, 1)
+	webhooks := make(chan TelegramWebhook, 1)
 
-	h := HandleWebhook(logger, counter, webhooks)
+	h := HandleTelegramWebhook(logger, counter, webhooks)
 
 	type checkFunc func(*http.Response) error
 
@@ -43,7 +43,7 @@ func TestHandleWebhook(t *testing.T) {
 		{
 			name: "NotPOST",
 			req: func() *http.Request {
-				req, _ := http.NewRequest(http.MethodGet, "/", nil)
+				req, _ := http.NewRequest(http.MethodGet, "/webhooks/telegram/123", nil)
 				return req
 			},
 			checks: []checkFunc{
@@ -73,10 +73,10 @@ func TestHandleWebhook(t *testing.T) {
 			},
 		},
 		{
-			name: "ValidWebhook",
+			name: "ValidWebhookPrivate",
 			req: func() *http.Request {
 				body := bytes.NewBufferString(validWebhook)
-				req, _ := http.NewRequest(http.MethodPost, "/", body)
+				req, _ := http.NewRequest(http.MethodPost, "/webhooks/telegram/123", body)
 				return req
 			},
 			checks: []checkFunc{
@@ -89,7 +89,30 @@ func TestHandleWebhook(t *testing.T) {
 					}
 
 					webhook := <-webhooks
-					if !assert.Equal(t, expected, webhook) {
+					if !assert.Equal(t, TelegramWebhook{ChatID: 123, Message: expected}, webhook) {
+						return errors.New("")
+					}
+					return nil
+				},
+			},
+		},
+		{
+			name: "ValidWebhookGroup",
+			req: func() *http.Request {
+				body := bytes.NewBufferString(validWebhook)
+				req, _ := http.NewRequest(http.MethodPost, "/webhooks/telegram/-1234", body)
+				return req
+			},
+			checks: []checkFunc{
+				checkStatusCode(http.StatusOK),
+				func(resp *http.Response) error {
+					var expected webhook.Message
+					if err := json.Unmarshal([]byte(validWebhook), &expected); err != nil {
+						return err
+					}
+
+					webhook := <-webhooks
+					if !assert.Equal(t, TelegramWebhook{ChatID: -1234, Message: expected}, webhook) {
 						return errors.New("")
 					}
 					return nil

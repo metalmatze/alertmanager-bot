@@ -25,7 +25,6 @@ import (
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/oklog/run"
-	"github.com/prometheus/alertmanager/notify/webhook"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -188,7 +187,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// TODO Needs fan out for multiple bots
-	webhooks := make(chan webhook.Message, 32)
+	webhooks := make(chan alertmanager.TelegramWebhook, 32)
 
 	var g run.Group
 	{
@@ -239,15 +238,14 @@ func main() {
 		}
 
 		webhooksCounter := prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "alertmanagerbot",
-			Name:      "webhooks_total",
-			Help:      "Number of webhooks received by this bot",
+			Name: "alertmanagerbot_webhooks_total",
+			Help: "Number of webhooks received by this bot",
 		})
 
 		reg.MustRegister(webhooksCounter)
 
 		m := http.NewServeMux()
-		m.HandleFunc("/", alertmanager.HandleWebhook(wlogger, webhooksCounter, webhooks))
+		m.HandleFunc("/webhooks/telegram/", alertmanager.HandleTelegramWebhook(wlogger, webhooksCounter, webhooks))
 		m.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 		m.HandleFunc("/health", handleHealth)
 		m.HandleFunc("/healthz", handleHealth)

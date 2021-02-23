@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/docker/libkv/store"
@@ -36,6 +37,21 @@ func (s *ChatStore) List() ([]*telebot.Chat, error) {
 	}
 
 	return chats, nil
+}
+
+// Get a specific chat by its ID.
+func (s *ChatStore) Get(id telebot.ChatID) (*telebot.Chat, error) {
+	key := fmt.Sprintf("%s/%d", s.storeKeyPrefix, id)
+	kv, err := s.kv.Get(key)
+	if err != nil {
+		if errors.Is(err, store.ErrKeyNotFound) {
+			return nil, ChatNotFoundErr
+		}
+		return nil, err
+	}
+	var c *telebot.Chat
+	err = json.Unmarshal(kv.Value, &c)
+	return c, err
 }
 
 // Add a telegram chat to the kv backend.

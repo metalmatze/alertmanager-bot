@@ -15,8 +15,9 @@ import (
 	"github.com/metalmatze/alertmanager-bot/pkg/alertmanager"
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
 	"github.com/prometheus/alertmanager/notify/webhook"
+	"github.com/prometheus/alertmanager/template"
 	"github.com/stretchr/testify/require"
-	telebot "gopkg.in/tucnak/telebot.v2"
+	"gopkg.in/tucnak/telebot.v2"
 )
 
 var (
@@ -35,12 +36,36 @@ var (
 		IsBot:     false,
 	}
 
+	webhookFiring = webhook.Message{
+		Data: &template.Data{
+			Receiver: "telegram",
+			Status:   "firing",
+			Alerts: template.Alerts{{
+				Status:      "firing",
+				Labels:      template.KV{"alertname": "fire", "severity": "critical"},
+				Annotations: template.KV{"message": "Something is on fire"},
+				//StartsAt:     time.Now().Add(-time.Hour),
+				EndsAt:       time.Time{},
+				GeneratorURL: "http://localhost:9090/graph?g0.expr=vector%28666%29\\u0026g0.tab=1",
+				Fingerprint:  "",
+			}},
+			GroupLabels:       template.KV{"alertname": "Fire"},
+			CommonLabels:      template.KV{"alertname": "Fire", "severity": "critical"},
+			CommonAnnotations: template.KV{"message": "Something is on fire"},
+			ExternalURL:       "http://localhost:9093",
+		},
+		Version:         "4",
+		GroupKey:        `{}:{alertname="Fire"}`,
+		TruncatedAlerts: 0,
+	}
+
 	// These are the different workflows/scenarios we are testing.
 	workflows = []struct {
 		name               string
 		messages           []telebot.Update
 		replies            []reply
 		logs               []string
+		webhooks           func() []alertmanager.TelegramWebhook
 		alertmanagerAlerts func() string
 		alertmanagerStatus func() string
 	}{{
@@ -72,7 +97,7 @@ var (
 			"", //TODO: "level=debug msg=\"message received\" text=/incomprehensible",
 		},
 	}, {
-		name: "Start",
+		name: "StartPrivate",
 		messages: []telebot.Update{{
 			Message: &telebot.Message{
 				Sender: admin,
@@ -86,7 +111,27 @@ var (
 		}},
 		logs: []string{
 			"level=debug msg=\"message received\" text=/start",
-			"level=info msg=\"user subscribed\" username=elliot user_id=123",
+			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=123",
+		},
+	}, {
+		name: "StartGroup",
+		messages: []telebot.Update{{
+			Message: &telebot.Message{
+				Sender: admin,
+				Chat: &telebot.Chat{
+					ID:   -1234,
+					Type: telebot.ChatGroup,
+				},
+				Text: telegram.CommandStart,
+			}},
+		},
+		replies: []reply{{
+			recipient: "-1234",
+			message:   "Hey! I will now keep you all up to date!\n/help",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/start",
+			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-1234",
 		},
 	}, {
 		name: "StopWithoutStart",
@@ -174,7 +219,7 @@ var (
 		}},
 		logs: []string{
 			"level=debug msg=\"message received\" text=/start",
-			"level=info msg=\"user subscribed\" username=elliot user_id=123",
+			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=123",
 			"level=debug msg=\"message received\" text=/chats",
 		},
 	}, {
@@ -292,6 +337,109 @@ var (
 				time.Now().Add(-2*time.Minute).Format(time.RFC3339),
 			)
 		},
+	}, {
+		name:     "WebhookNoSubscribers",
+		messages: []telebot.Update{},
+		replies:  []reply{},
+		logs: []string{
+			"level=warn msg=\"chat is not subscribed for alerts\" chat_id=132461234 err=\"chat not found in store\"",
+		},
+		webhooks: func() []alertmanager.TelegramWebhook {
+			webhookFiring.Alerts[0].StartsAt = time.Now().Add(-time.Hour)
+			return []alertmanager.TelegramWebhook{{ChatID: 132461234, Message: webhookFiring}}
+		},
+	}, {
+		name: "WebhookAdminSubscriber",
+		messages: []telebot.Update{{
+			Message: &telebot.Message{
+				Sender: admin,
+				Chat:   chatFromUser(admin),
+				Text:   telegram.CommandStart,
+			},
+		}},
+		replies: []reply{{
+			recipient: "123",
+			message:   "Hey, Elliot! I will now keep you up to date!\n/help",
+		}, {
+			recipient: "123",
+			message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/start",
+			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=123",
+		},
+		webhooks: func() []alertmanager.TelegramWebhook {
+			webhookFiring.Alerts[0].StartsAt = time.Now().Add(-time.Hour)
+			return []alertmanager.TelegramWebhook{{ChatID: int64(admin.ID), Message: webhookFiring}}
+		},
+	}, {
+		name: "WebhookGroupSubscriber",
+		messages: []telebot.Update{{
+			Message: &telebot.Message{
+				Sender: admin,
+				Chat: &telebot.Chat{
+					ID:   -1234,
+					Type: telebot.ChatGroup,
+				},
+				Text: telegram.CommandStart,
+			},
+		}},
+		replies: []reply{{
+			recipient: "-1234",
+			message:   "Hey! I will now keep you all up to date!\n/help",
+		}, {
+			recipient: "-1234",
+			message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/start",
+			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-1234",
+		},
+		webhooks: func() []alertmanager.TelegramWebhook {
+			webhookFiring.Alerts[0].StartsAt = time.Now().Add(-time.Hour)
+			return []alertmanager.TelegramWebhook{{ChatID: int64(-1234), Message: webhookFiring}}
+		},
+	}, {
+		name: "WebhookMultipleGroupsSubscribed",
+		messages: []telebot.Update{{
+			Message: &telebot.Message{
+				Sender: admin,
+				Chat: &telebot.Chat{
+					ID:   -1234,
+					Type: telebot.ChatGroup,
+				},
+				Text: telegram.CommandStart,
+			},
+		}, {
+			Message: &telebot.Message{
+				Sender: admin,
+				Chat: &telebot.Chat{
+					ID:   -5678,
+					Type: telebot.ChatGroup,
+				},
+				Text: telegram.CommandStart,
+			},
+		}},
+		replies: []reply{{
+			recipient: "-1234",
+			message:   "Hey! I will now keep you all up to date!\n/help",
+		}, {
+			recipient: "-5678",
+			message:   "Hey! I will now keep you all up to date!\n/help",
+		}, {
+			recipient: "-1234",
+			message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
+		}},
+		logs: []string{
+			"level=debug msg=\"message received\" text=/start",
+			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-1234",
+			"level=debug msg=\"message received\" text=/start",
+			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-5678",
+		},
+		webhooks: func() []alertmanager.TelegramWebhook {
+			webhookFiring.Alerts[0].StartsAt = time.Now().Add(-time.Hour)
+			return []alertmanager.TelegramWebhook{{ChatID: int64(-1234), Message: webhookFiring}}
+		},
 	}}
 )
 
@@ -316,6 +464,14 @@ func (t *testStore) List() ([]*telebot.Chat, error) {
 		chats = append(chats, chat)
 	}
 	return chats, nil
+}
+
+func (t *testStore) Get(id telebot.ChatID) (*telebot.Chat, error) {
+	chat, ok := t.chats[int64(id)]
+	if !ok {
+		return nil, telegram.ChatNotFoundErr
+	}
+	return chat, nil
 }
 
 func (t *testStore) Add(c *telebot.Chat) error {
@@ -443,9 +599,11 @@ func TestWorkflows(t *testing.T) {
 			)
 			require.NoError(t, err)
 
+			webhooks := make(chan alertmanager.TelegramWebhook, 10)
+
 			// Run the bot in the background and tests in foreground.
 			go func(ctx context.Context) {
-				require.NoError(t, bot.Run(ctx, make(chan webhook.Message)))
+				require.NoError(t, bot.Run(ctx, webhooks))
 			}(ctx)
 
 			for i, update := range w.messages {
@@ -453,6 +611,12 @@ func TestWorkflows(t *testing.T) {
 				update.Message.ID = i
 				poller.updates <- update
 				time.Sleep(time.Millisecond)
+			}
+
+			if w.webhooks != nil {
+				for _, webhook := range w.webhooks() {
+					webhooks <- webhook
+				}
 			}
 
 			// TODO: Don't sleep but block somehow different
