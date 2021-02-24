@@ -17,7 +17,6 @@ import (
 	"github.com/prometheus/alertmanager/api/v2/models"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
-	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/tucnak/telebot.v2"
 )
 
@@ -88,7 +87,7 @@ type Bot struct {
 
 	telegram Telebot
 
-	commandsCounter *prometheus.CounterVec
+	commandEvents func(command string)
 }
 
 // BotOption passed to NewBot to change the default instance.
@@ -112,19 +111,13 @@ func NewBot(chats BotChatStore, token string, admin int, opts ...BotOption) (*Bo
 }
 
 func NewBotWithTelegram(chats BotChatStore, bot Telebot, admin int, opts ...BotOption) (*Bot, error) {
-	commandsCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "alertmanagerbot_commands_total",
-		Help: "Number of commands received by command name",
-	}, []string{"command"})
-
 	b := &Bot{
-		logger:          log.NewNopLogger(),
-		telegram:        bot,
-		chats:           chats,
-		addr:            "127.0.0.1:8080",
-		admins:          []int{admin},
-		commandsCounter: commandsCounter,
-		// TODO: initialize templates with default?
+		logger:        log.NewNopLogger(),
+		telegram:      bot,
+		chats:         chats,
+		addr:          "127.0.0.1:8080",
+		admins:        []int{admin},
+		commandEvents: func(command string) {},
 	}
 
 	for _, opt := range opts {
@@ -144,10 +137,11 @@ func WithLogger(l log.Logger) BotOption {
 	}
 }
 
-// WithRegistry registers the Bot's metrics with the passed prometheus.Registry.
-func WithRegistry(r *prometheus.Registry) BotOption {
+// WithCommandEvent sets a func to call whenever commands are handled.
+func WithCommandEvent(callback func(command string)) BotOption {
 	return func(b *Bot) error {
-		return r.Register(b.commandsCounter)
+		b.commandEvents = callback
+		return nil
 	}
 }
 
@@ -312,6 +306,8 @@ func (b *Bot) middleware(next func(*telebot.Message) error) func(*telebot.Messag
 			)
 			return
 		}
+
+		b.commandEvents(m.Text)
 
 		level.Debug(b.logger).Log("msg", "message received", "text", m.Text)
 		if err := next(m); err != nil {

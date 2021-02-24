@@ -21,6 +21,7 @@ var alertsWorkflows = []workflow{{
 		recipient: "123",
 		message:   "No alerts right now! 🎉",
 	}},
+	counter: map[string]uint{telegram.CommandAlerts: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/alerts",
 	},
@@ -37,6 +38,7 @@ var alertsWorkflows = []workflow{{
 		recipient: "123",
 		message:   "🔥 <b>damn</b> 🔥\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n    runbook: https://example.com/runbook\n<b>Duration:</b> 1 hour",
 	}},
+	counter: map[string]uint{telegram.CommandAlerts: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/alerts",
 	},
@@ -59,6 +61,7 @@ var alertsWorkflows = []workflow{{
 		recipient: "123",
 		message:   "✅ <b>damn</b> ✅\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n<b>Duration:</b> 58 minutes\n<b>Ended:</b> 2 minutes",
 	}},
+	counter: map[string]uint{telegram.CommandAlerts: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/alerts",
 	},

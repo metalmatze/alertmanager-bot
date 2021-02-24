@@ -115,6 +115,10 @@ func main() {
 	)
 
 	reg := prometheus.NewRegistry()
+	reg.MustRegister(
+		prometheus.NewGoCollector(),
+		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
+	)
 
 	var am *alertmanager.Client
 	{
@@ -193,6 +197,16 @@ func main() {
 	{
 		tlogger := log.With(logger, "component", "telegram")
 
+		commandCounter := prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "alertmanagerbot_commands_total",
+			Help: "Number of commands received by command name",
+		}, []string{"command"})
+		reg.MustRegister(commandCounter)
+
+		commandCount := func(command string) {
+			commandCounter.WithLabelValues(command).Inc()
+		}
+
 		chats, err := telegram.NewChatStore(kvStore, cli.StorePrefix)
 		if err != nil {
 			level.Error(logger).Log("msg", "failed to create chat store", "err", err)
@@ -202,7 +216,7 @@ func main() {
 		bot, err := telegram.NewBot(
 			chats, cli.cliTelegram.Token, cli.cliTelegram.Admins[0],
 			telegram.WithLogger(tlogger),
-			telegram.WithRegistry(reg),
+			telegram.WithCommandEvent(commandCount),
 			telegram.WithAddr(cli.ListenAddr),
 			telegram.WithAlertmanager(am),
 			telegram.WithTemplates(cli.AlertmanagerURL, cli.TemplatePaths...),

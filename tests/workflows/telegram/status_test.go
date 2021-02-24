@@ -21,6 +21,7 @@ var statusWorkflows = []workflow{{
 		recipient: "123",
 		message:   "*AlertManager*\nVersion: alertmanager\nUptime: 1 minute\n*AlertManager Bot*\nVersion: bot\nUptime: 1 minute",
 	}},
+	counter: map[string]uint{telegram.CommandStatus: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/status",
 	},

@@ -18,6 +18,7 @@ var stopWorkflows = []workflow{{
 		recipient: "123",
 		message:   "Alright, Elliot! I won't talk to you again.\n/help",
 	}},
+	counter: map[string]uint{telegram.CommandStop: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/stop",
 		"level=info msg=\"user unsubscribed\" username=elliot user_id=123",

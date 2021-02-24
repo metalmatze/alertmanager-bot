@@ -18,6 +18,7 @@ var idWorkflows = []workflow{{
 		recipient: "222",
 		message:   "Your ID is 222",
 	}},
+	counter: map[string]uint{telegram.CommandID: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/id",
 	},
@@ -34,6 +35,7 @@ var idWorkflows = []workflow{{
 		recipient: "123",
 		message:   "Your ID is 123",
 	}},
+	counter: map[string]uint{telegram.CommandID: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/id",
 	},
