@@ -20,6 +20,16 @@ import (
 	"gopkg.in/tucnak/telebot.v2"
 )
 
+type workflow struct {
+	name               string
+	messages           []telebot.Update
+	replies            []reply
+	logs               []string
+	webhooks           func() []alertmanager.TelegramWebhook
+	alertmanagerAlerts func() string
+	alertmanagerStatus func() string
+}
+
 var (
 	admin = &telebot.User{
 		ID:        123,
@@ -60,15 +70,7 @@ var (
 	}
 
 	// These are the different workflows/scenarios we are testing.
-	workflows = []struct {
-		name               string
-		messages           []telebot.Update
-		replies            []reply
-		logs               []string
-		webhooks           func() []alertmanager.TelegramWebhook
-		alertmanagerAlerts func() string
-		alertmanagerStatus func() string
-	}{{
+	workflows = []workflow{{
 		name: "Dropped",
 		messages: []telebot.Update{{
 			Message: &telebot.Message{
@@ -95,350 +97,6 @@ var (
 		//}},
 		logs: []string{
 			"", //TODO: "level=debug msg=\"message received\" text=/incomprehensible",
-		},
-	}, {
-		name: "StartPrivate",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandStart,
-			}},
-		},
-		replies: []reply{{
-			recipient: "123",
-			message:   "Hey, Elliot! I will now keep you up to date!\n/help",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/start",
-			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=123",
-		},
-	}, {
-		name: "StartGroup",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat: &telebot.Chat{
-					ID:   -1234,
-					Type: telebot.ChatGroup,
-				},
-				Text: telegram.CommandStart,
-			}},
-		},
-		replies: []reply{{
-			recipient: "-1234",
-			message:   "Hey! I will now keep you all up to date!\n/help",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/start",
-			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-1234",
-		},
-	}, {
-		name: "StopWithoutStart",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandStop,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   "Alright, Elliot! I won't talk to you again.\n/help",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/stop",
-			"level=info msg=\"user unsubscribed\" username=elliot user_id=123",
-		},
-	}, {
-		name: "Help",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandHelp,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   strings.TrimSpace(telegram.ResponseHelp),
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/help",
-		},
-	}, {
-		name: "HelpAsNobody",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: nobody,
-				Chat:   chatFromUser(nobody),
-				Text:   telegram.CommandHelp,
-			},
-		}},
-		replies: []reply{},
-		logs: []string{
-			"level=info msg=\"dropping message from forbidden sender\" sender_id=222 sender_username=nobody",
-		},
-	}, {
-		name: "ChatsNone",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandChats,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   "Currently no one is subscribed.",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/chats",
-		},
-	}, {
-		name: "ChatsWithAdminSubscribed",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandStart,
-			},
-		}, {
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandChats,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   "Hey, Elliot! I will now keep you up to date!\n/help",
-		}, {
-			recipient: "123",
-			message:   "Currently these chat have subscribed:\n@elliot",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/start",
-			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=123",
-			"level=debug msg=\"message received\" text=/chats",
-		},
-	}, {
-		name: "IDAsNobody",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: nobody,
-				Chat:   chatFromUser(nobody),
-				Text:   telegram.CommandID,
-			},
-		}},
-		replies: []reply{{
-			recipient: "222",
-			message:   "Your ID is 222",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/id",
-		},
-	}, {
-		name: "IDAsAdmin",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandID,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   "Your ID is 123",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/id",
-		},
-	}, {
-		name: "Status",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandStatus,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   "*AlertManager*\nVersion: alertmanager\nUptime: 1 minute\n*AlertManager Bot*\nVersion: bot\nUptime: 1 minute",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/status",
-		},
-		alertmanagerStatus: func() string {
-			return fmt.Sprintf(
-				`{"uptime":%q,"versionInfo":{"version":"alertmanager"}}`,
-				time.Now().Add(-time.Minute).Format(time.RFC3339),
-			)
-		},
-	}, {
-		name: "AlertsNone",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandAlerts,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   "No alerts right now! 🎉",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/alerts",
-		},
-	}, {
-		name: "AlertsFiring",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandAlerts,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   "🔥 <b>damn</b> 🔥\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n    runbook: https://example.com/runbook\n<b>Duration:</b> 1 hour",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/alerts",
-		},
-		alertmanagerAlerts: func() string {
-			return fmt.Sprintf(
-				`[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!","runbook":"https://example.com/runbook"},"startsAt":"%s"}]`,
-				time.Now().Add(-time.Hour).Format(time.RFC3339),
-			)
-		},
-	}, {
-		name: "AlertsResolved",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandAlerts,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   "✅ <b>damn</b> ✅\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n<b>Duration:</b> 58 minutes\n<b>Ended:</b> 2 minutes",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/alerts",
-		},
-		alertmanagerAlerts: func() string {
-			return fmt.Sprintf(
-				`[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!"},"startsAt": "%s","endsAt": "%s"}]`,
-				time.Now().Add(-time.Hour).Format(time.RFC3339),
-				time.Now().Add(-2*time.Minute).Format(time.RFC3339),
-			)
-		},
-	}, {
-		name:     "WebhookNoSubscribers",
-		messages: []telebot.Update{},
-		replies:  []reply{},
-		logs: []string{
-			"level=warn msg=\"chat is not subscribed for alerts\" chat_id=132461234 err=\"chat not found in store\"",
-		},
-		webhooks: func() []alertmanager.TelegramWebhook {
-			webhookFiring.Alerts[0].StartsAt = time.Now().Add(-time.Hour)
-			return []alertmanager.TelegramWebhook{{ChatID: 132461234, Message: webhookFiring}}
-		},
-	}, {
-		name: "WebhookAdminSubscriber",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat:   chatFromUser(admin),
-				Text:   telegram.CommandStart,
-			},
-		}},
-		replies: []reply{{
-			recipient: "123",
-			message:   "Hey, Elliot! I will now keep you up to date!\n/help",
-		}, {
-			recipient: "123",
-			message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/start",
-			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=123",
-		},
-		webhooks: func() []alertmanager.TelegramWebhook {
-			webhookFiring.Alerts[0].StartsAt = time.Now().Add(-time.Hour)
-			return []alertmanager.TelegramWebhook{{ChatID: int64(admin.ID), Message: webhookFiring}}
-		},
-	}, {
-		name: "WebhookGroupSubscriber",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat: &telebot.Chat{
-					ID:   -1234,
-					Type: telebot.ChatGroup,
-				},
-				Text: telegram.CommandStart,
-			},
-		}},
-		replies: []reply{{
-			recipient: "-1234",
-			message:   "Hey! I will now keep you all up to date!\n/help",
-		}, {
-			recipient: "-1234",
-			message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/start",
-			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-1234",
-		},
-		webhooks: func() []alertmanager.TelegramWebhook {
-			webhookFiring.Alerts[0].StartsAt = time.Now().Add(-time.Hour)
-			return []alertmanager.TelegramWebhook{{ChatID: int64(-1234), Message: webhookFiring}}
-		},
-	}, {
-		name: "WebhookMultipleGroupsSubscribed",
-		messages: []telebot.Update{{
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat: &telebot.Chat{
-					ID:   -1234,
-					Type: telebot.ChatGroup,
-				},
-				Text: telegram.CommandStart,
-			},
-		}, {
-			Message: &telebot.Message{
-				Sender: admin,
-				Chat: &telebot.Chat{
-					ID:   -5678,
-					Type: telebot.ChatGroup,
-				},
-				Text: telegram.CommandStart,
-			},
-		}},
-		replies: []reply{{
-			recipient: "-1234",
-			message:   "Hey! I will now keep you all up to date!\n/help",
-		}, {
-			recipient: "-5678",
-			message:   "Hey! I will now keep you all up to date!\n/help",
-		}, {
-			recipient: "-1234",
-			message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
-		}},
-		logs: []string{
-			"level=debug msg=\"message received\" text=/start",
-			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-1234",
-			"level=debug msg=\"message received\" text=/start",
-			"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-5678",
-		},
-		webhooks: func() []alertmanager.TelegramWebhook {
-			webhookFiring.Alerts[0].StartsAt = time.Now().Add(-time.Hour)
-			return []alertmanager.TelegramWebhook{{ChatID: int64(-1234), Message: webhookFiring}}
 		},
 	}}
 )
@@ -569,6 +227,15 @@ func TestWorkflows(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	workflows = append(workflows, alertsWorkflows...)
+	workflows = append(workflows, chatsWorkflows...)
+	workflows = append(workflows, helpWorkflows...)
+	workflows = append(workflows, idWorkflows...)
+	workflows = append(workflows, startWorkflows...)
+	workflows = append(workflows, stopWorkflows...)
+	workflows = append(workflows, statusWorkflows...)
+	workflows = append(workflows, webhookWorkflows...)
+
 	for _, w := range workflows {
 		t.Run(w.name, func(t *testing.T) {
 			testAlertmanagerAlerts = w.alertmanagerAlerts
@@ -593,7 +260,7 @@ func TestWorkflows(t *testing.T) {
 			bot, err := telegram.NewBotWithTelegram(testStore, testTelegram, admin.ID,
 				telegram.WithLogger(log.NewLogfmtLogger(logs)),
 				telegram.WithAlertmanager(am),
-				telegram.WithTemplates(&url.URL{Host: "localhost"}, "../../default.tmpl"),
+				telegram.WithTemplates(&url.URL{Host: "localhost"}, "../../../default.tmpl"),
 				telegram.WithStartTime(time.Now().Add(-time.Minute)),
 				telegram.WithRevision("bot"),
 			)
