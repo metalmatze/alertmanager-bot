@@ -9,8 +9,11 @@ import (
 	"github.com/prometheus/common/model"
 )
 
-func (c *Client) ListAlerts(ctx context.Context) ([]*types.Alert, error) {
-	getAlerts, err := c.alertmanager.Alert.GetAlerts(alert.NewGetAlertsParams().WithContext(ctx))
+func (c *Client) ListAlerts(ctx context.Context, receiver string, silenced bool) ([]*types.Alert, error) {
+	getAlerts, err := c.alertmanager.Alert.GetAlerts(alert.NewGetAlertsParams().WithContext(ctx).
+		WithReceiver(&receiver).
+		WithSilenced(&silenced),
+	)
 	if err != nil {
 		return nil, err
 	}
