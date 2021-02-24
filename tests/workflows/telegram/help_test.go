@@ -20,6 +20,7 @@ var helpWorkflows = []workflow{{
 		recipient: "123",
 		message:   strings.TrimSpace(telegram.ResponseHelp),
 	}},
+	counter: map[string]uint{telegram.CommandHelp: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/help",
 	},

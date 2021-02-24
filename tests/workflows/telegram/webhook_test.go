@@ -35,6 +35,7 @@ var webhookWorkflows = []workflow{{
 		recipient: "123",
 		message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
 	}},
+	counter: map[string]uint{telegram.CommandStart: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/start",
 		"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=123",
@@ -62,6 +63,7 @@ var webhookWorkflows = []workflow{{
 		recipient: "-1234",
 		message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
 	}},
+	counter: map[string]uint{telegram.CommandStart: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/start",
 		"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-1234",
@@ -101,6 +103,7 @@ var webhookWorkflows = []workflow{{
 		recipient: "-1234",
 		message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
 	}},
+	counter: map[string]uint{telegram.CommandStart: 2},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/start",
 		"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=-1234",

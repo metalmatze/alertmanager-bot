@@ -21,10 +21,12 @@ import (
 )
 
 type workflow struct {
-	name               string
-	messages           []telebot.Update
-	replies            []reply
-	logs               []string
+	name     string
+	messages []telebot.Update
+	replies  []reply
+	logs     []string
+	counter  map[string]uint
+
 	webhooks           func() []alertmanager.TelegramWebhook
 	alertmanagerAlerts func() string
 	alertmanagerStatus func() string
@@ -78,6 +80,7 @@ var (
 			},
 		}},
 		replies: []reply{},
+		counter: map[string]uint{},
 		logs: []string{
 			"", // TODO: "level=info msg=\"failed to process message\" err=\"dropped message from forbidden sender\" sender_id=222 sender_username=nobody",
 		},
@@ -109,6 +112,10 @@ func chatFromUser(user *telebot.User) *telebot.Chat {
 		Username:  user.Username,
 		Type:      telebot.ChatPrivate,
 	}
+}
+
+type reply struct {
+	recipient, message string
 }
 
 type testStore struct {
@@ -144,8 +151,12 @@ func (t *testStore) Remove(_ *telebot.Chat) error {
 	return nil
 }
 
-type reply struct {
-	recipient, message string
+type testCommandCounter struct {
+	counter map[string]uint
+}
+
+func (c *testCommandCounter) Count(command string) {
+	c.counter[command]++
 }
 
 // wraps telebot to intercept sent messages.
@@ -256,9 +267,11 @@ func TestWorkflows(t *testing.T) {
 
 			testStore := &testStore{}
 			testTelegram := &testTelegram{bot: tb}
+			counter := testCommandCounter{counter: map[string]uint{}}
 
 			bot, err := telegram.NewBotWithTelegram(testStore, testTelegram, admin.ID,
 				telegram.WithLogger(log.NewLogfmtLogger(logs)),
+				telegram.WithCommandEvent(counter.Count),
 				telegram.WithAlertmanager(am),
 				telegram.WithTemplates(&url.URL{Host: "localhost"}, "../../../default.tmpl"),
 				telegram.WithStartTime(time.Now().Add(-time.Minute)),
@@ -300,6 +313,11 @@ func TestWorkflows(t *testing.T) {
 			require.Len(t, logLines, len(w.logs))
 			for i, l := range w.logs {
 				require.Equal(t, l, logLines[i])
+			}
+
+			require.Len(t, counter.counter, len(w.counter))
+			for command, count := range counter.counter {
+				require.Equal(t, w.counter[command], count)
 			}
 
 			cancel()

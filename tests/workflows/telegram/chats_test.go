@@ -18,6 +18,7 @@ var chatsWorkflows = []workflow{{
 		recipient: "123",
 		message:   "Currently no one is subscribed.",
 	}},
+	counter: map[string]uint{telegram.CommandChats: 1},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/chats",
 	},
@@ -43,6 +44,10 @@ var chatsWorkflows = []workflow{{
 		recipient: "123",
 		message:   "Currently these chat have subscribed:\n@elliot",
 	}},
+	counter: map[string]uint{
+		telegram.CommandChats: 1,
+		telegram.CommandStart: 1,
+	},
 	logs: []string{
 		"level=debug msg=\"message received\" text=/start",
 		"level=info msg=\"user subscribed\" username=elliot user_id=123 chat_id=123",
