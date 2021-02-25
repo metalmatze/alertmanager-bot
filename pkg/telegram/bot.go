@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/alertmanager/api/v2/models"
+	"github.com/prometheus/alertmanager/config"
 	"github.com/prometheus/alertmanager/template"
 	"github.com/prometheus/alertmanager/types"
 	"gopkg.in/tucnak/telebot.v2"
@@ -30,6 +32,9 @@ const (
 	CommandStatus   = "/status"
 	CommandAlerts   = "/alerts"
 	CommandSilences = "/silences"
+
+	responseAlertsNotConfigured = "This chat hasn't been setup to receive any alerts yet... 😕\n\n" +
+		"Ask an administrator of the Alertmanager to add a webhook with `/webhooks/telegram/%d` as URL."
 
 	responseStartPrivate = "Hey, %s! I will now keep you up to date!\n" + CommandHelp
 	responseStartGroup   = "Hey! I will now keep you all up to date!\n" + CommandHelp
@@ -69,7 +74,7 @@ type Telebot interface {
 }
 
 type Alertmanager interface {
-	ListAlerts(context.Context) ([]*types.Alert, error)
+	ListAlerts(context.Context, string, bool) ([]*types.Alert, error)
 	ListSilences(context.Context) ([]*types.Silence, error)
 	Status(context.Context) (*models.AlertmanagerStatus, error)
 }
@@ -307,7 +312,8 @@ func (b *Bot) middleware(next func(*telebot.Message) error) func(*telebot.Messag
 			return
 		}
 
-		b.commandEvents(m.Text)
+		command := strings.Split(m.Text, " ")[0]
+		b.commandEvents(command)
 
 		level.Debug(b.logger).Log("msg", "message received", "text", m.Text)
 		if err := next(m); err != nil {
@@ -422,7 +428,25 @@ func (b *Bot) handleStatus(message *telebot.Message) error {
 }
 
 func (b *Bot) handleAlerts(message *telebot.Message) error {
-	alerts, err := b.alertmanager.ListAlerts(context.TODO())
+	status, err := b.alertmanager.Status(context.TODO())
+	if err != nil {
+		level.Warn(b.logger).Log("msg", "failed to get status with config", "err", err)
+		_, err = b.telegram.Send(message.Chat, fmt.Sprintf("failed to list alerts... %v", err))
+		return err
+	}
+
+	receiver, err := receiverFromConfig(*status.Config.Original, message.Chat.ID)
+	if err != nil || receiver == "" {
+		_, err := b.telegram.Send(message.Chat, fmt.Sprintf(responseAlertsNotConfigured, message.Chat.ID), &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+		return err
+	}
+
+	silenced := false
+	if strings.Contains(message.Payload, "silenced") {
+		silenced = true
+	}
+
+	alerts, err := b.alertmanager.ListAlerts(context.TODO(), receiver, silenced)
 	if err != nil {
 		level.Warn(b.logger).Log("msg", "failed to list alerts", "err", err)
 		_, err = b.telegram.Send(message.Chat, fmt.Sprintf("failed to list alerts... %v", err))
@@ -444,6 +468,34 @@ func (b *Bot) handleAlerts(message *telebot.Message) error {
 		ParseMode: telebot.ModeHTML,
 	})
 	return err
+}
+
+func receiverFromConfig(c string, id int64) (string, error) {
+	if c == "" {
+		return "", fmt.Errorf("config is empty")
+	}
+
+	config, err := config.Load(c)
+	if err != nil {
+		return "", err
+	}
+
+	for _, receiver := range config.Receivers {
+		for _, webhook := range receiver.WebhookConfigs {
+			path := webhook.URL.Path
+			if strings.HasPrefix(path, "/webhooks/telegram/") {
+				parseID, err := strconv.ParseInt(strings.TrimPrefix(path, "/webhooks/telegram/"), 10, 64)
+				if err != nil {
+					return "", err
+				}
+				if parseID == id {
+					return receiver.Name, nil
+				}
+			}
+		}
+	}
+
+	return "", nil
 }
 
 func (b *Bot) handleSilences(message *telebot.Message) error {

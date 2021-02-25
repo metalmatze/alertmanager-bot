@@ -2,6 +2,8 @@ package telegram
 
 import (
 	"fmt"
+	"net/http"
+	"testing"
 	"time"
 
 	"github.com/metalmatze/alertmanager-bot/pkg/telegram"
@@ -25,7 +27,7 @@ var statusWorkflows = []workflow{{
 	logs: []string{
 		"level=debug msg=\"message received\" text=/status",
 	},
-	alertmanagerStatus: func() string {
+	alertmanagerStatus: func(t *testing.T, r *http.Request) string {
 		return fmt.Sprintf(
 			`{"uptime":%q,"versionInfo":{"version":"alertmanager"}}`,
 			time.Now().Add(-time.Minute).Format(time.RFC3339),

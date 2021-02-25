@@ -28,8 +28,8 @@ type workflow struct {
 	counter  map[string]uint
 
 	webhooks           func() []alertmanager.TelegramWebhook
-	alertmanagerAlerts func() string
-	alertmanagerStatus func() string
+	alertmanagerAlerts func(t *testing.T, r *http.Request) string
+	alertmanagerStatus func(t *testing.T, r *http.Request) string
 }
 
 var (
@@ -207,15 +207,15 @@ func (t *testPoller) Poll(_ *telebot.Bot, updates chan telebot.Update, stop chan
 }
 
 func TestWorkflows(t *testing.T) {
-	var testAlertmanagerAlerts func() string
-	var testAlertmanagerStatus func() string
+	var testAlertmanagerAlerts func(t *testing.T, r *http.Request) string
+	var testAlertmanagerStatus func(t *testing.T, r *http.Request) string
 	var am *alertmanager.Client
 	{
 		m := http.NewServeMux()
 		m.HandleFunc("/api/v2/alerts", func(w http.ResponseWriter, r *http.Request) {
 			data := "[]"
 			if testAlertmanagerAlerts != nil {
-				data = testAlertmanagerAlerts()
+				data = testAlertmanagerAlerts(t, r)
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(data))
@@ -223,7 +223,7 @@ func TestWorkflows(t *testing.T) {
 		m.HandleFunc("/api/v2/status", func(w http.ResponseWriter, r *http.Request) {
 			data := "{}"
 			if testAlertmanagerStatus != nil {
-				data = testAlertmanagerStatus()
+				data = testAlertmanagerStatus(t, r)
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(data))

@@ -175,7 +175,7 @@ func TestClient(t *testing.T) {
 			Timeout:   false,
 		}}
 
-		alerts, err := client.ListAlerts(context.Background())
+		alerts, err := client.ListAlerts(context.Background(), "", false)
 		require.NoError(t, err)
 		require.Equal(t, expected, alerts)
 	}
