@@ -58,7 +58,7 @@ var (
 				Annotations: template.KV{"message": "Something is on fire"},
 				//StartsAt:     time.Now().Add(-time.Hour),
 				EndsAt:       time.Time{},
-				GeneratorURL: "http://localhost:9090/graph?g0.expr=vector%28666%29\\u0026g0.tab=1",
+				GeneratorURL: "http://localhost:9090/graph?g0.expr=fire",
 				Fingerprint:  "",
 			}},
 			GroupLabels:       template.KV{"alertname": "Fire"},
