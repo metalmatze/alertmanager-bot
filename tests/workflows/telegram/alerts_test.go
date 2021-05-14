@@ -42,7 +42,7 @@ var alertsWorkflows = []workflow{{
 	}},
 	replies: []reply{{
 		recipient: "123",
-		message:   "🔥 <b>damn</b> 🔥\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n    runbook: https://example.com/runbook\n<b>Duration:</b> 1 hour",
+		message:   "🔥 <a href=\"http://exmaple.com/graph?g0.expr=damn\"><b>damn</b></a> 🔥\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n    runbook: https://example.com/runbook\n<b>Duration:</b> 1 hour",
 	}},
 	counter: map[string]uint{telegram.CommandAlerts: 1},
 	logs: []string{
@@ -56,7 +56,7 @@ var alertsWorkflows = []workflow{{
 		require.Equal(t, "true", r.URL.Query().Get("unprocessed"))
 
 		return fmt.Sprintf(
-			`[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!","runbook":"https://example.com/runbook"},"startsAt":"%s"}]`,
+			`[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!","runbook":"https://example.com/runbook"},"startsAt":"%s","generatorURL": "http://exmaple.com/graph?g0.expr=damn"}]`,
 			time.Now().Add(-time.Hour).Format(time.RFC3339),
 		)
 	},
@@ -74,7 +74,7 @@ var alertsWorkflows = []workflow{{
 	}},
 	replies: []reply{{
 		recipient: "123",
-		message:   "🔥 <b>damn</b> 🔥\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n    runbook: https://example.com/runbook\n<b>Duration:</b> 1 hour",
+		message:   "🔥 <a href=\"http://exmaple.com/graph?g0.expr=damn\"><b>damn</b></a> 🔥\n<b>Labels:</b>\n    bot: alertmanager-bot\n<b>Annotations:</b>\n    msg: sup?!\n    runbook: https://example.com/runbook\n<b>Duration:</b> 1 hour",
 	}},
 	counter: map[string]uint{telegram.CommandAlerts: 1},
 	logs: []string{
@@ -88,7 +88,7 @@ var alertsWorkflows = []workflow{{
 		require.Equal(t, "true", r.URL.Query().Get("unprocessed"))
 
 		return fmt.Sprintf(
-			`[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!","runbook":"https://example.com/runbook"},"startsAt":"%s"}]`,
+			`[{"labels":{"alertname":"damn","bot":"alertmanager-bot"},"annotations":{"msg":"sup?!","runbook":"https://example.com/runbook"},"startsAt":"%s","generatorURL": "http://exmaple.com/graph?g0.expr=damn"}]`,
 			time.Now().Add(-time.Hour).Format(time.RFC3339),
 		)
 	},
