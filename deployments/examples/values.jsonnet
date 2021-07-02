@@ -9,7 +9,7 @@
   // This is just an example!
   // Remove this from jsonnet and create a proper secret!
   telegram: {
-    admin: '1234',
+    admin: '1234,56789',
     token: 'XXXXXXX',
   },
 

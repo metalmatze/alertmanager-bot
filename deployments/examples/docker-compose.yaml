@@ -8,7 +8,7 @@ services:
     - --store=bolt
     - --bolt.path=/data/bot.db
     environment:
-      TELEGRAM_ADMIN: "1234"
+      TELEGRAM_ADMIN: 1234,56789
       TELEGRAM_TOKEN: XXXXXXX
     image: metalmatze/alertmanager-bot:0.4.3
     networks:

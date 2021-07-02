@@ -85,7 +85,7 @@ type cliEtcd struct {
 }
 
 type cliTelegram struct {
-	Admins []int  `required:"true" name:"telegram.admin" help:"The ID of the initial Telegram Admin"`
+	Admins []int  `required:"true" name:"telegram.admin" env:"TELEGRAM_ADMIN" help:"The ID of the Telegram Admins"`
 	Token  string `required:"true" name:"telegram.token" env:"TELEGRAM_TOKEN" help:"The token used to connect with Telegram"`
 }
 
