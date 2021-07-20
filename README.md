@@ -321,7 +321,7 @@ A webhook is used for that, so make sure your `LISTEN_ADDR` is reachable for the
 For example add this to your `alertmanager.yml` configuration:
 ```yaml
 receivers:
-- name: 'alertmananger-bot'
+- name: 'alertmanager-bot'
   webhook_configs:
   - send_resolved: true
     url: 'http://alertmanager-bot:8080'
