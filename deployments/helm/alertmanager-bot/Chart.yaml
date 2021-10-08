@@ -1,0 +1,9 @@
+apiVersion: v2
+name: alertmanager-bot
+description:  Bot for Prometheus' Alertmanager 
+type: application
+version: 0.1.0
+appVersion: "v0.4.3"
+home: https://github.com/metalmatze/alertmanager-bot
+sources:
+  - https://github.com/metalmatze/alertmanager-bot

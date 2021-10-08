@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "alertmanager-bot.fullname" . }}
+  labels:
+    {{- include "alertmanager-bot.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "alertmanager-bot.selectorLabels" . | nindent 6 }}
+  serviceName: {{ include "alertmanager-bot.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "alertmanager-bot.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: alertmanager-bot
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        args:
+          - --alertmanager.url={{ .Values.config.alertmanagerUrl }}
+          - --log.level={{ .Values.config.logLevel | default "info" }}
+          - --store=bolt
+          - --bolt.path=/data/bot.db
+        env:
+          - name: TELEGRAM_ADMIN
+            valueFrom:
+              secretKeyRef:
+                key: adminUser
+                name: {{ .Values.secret.existingSecret | default (include "alertmanager-bot.fullname" .) }}
+          - name: TELEGRAM_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: botToken
+                name: {{ .Values.secret.existingSecret | default (include "alertmanager-bot.fullname" .) }}
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ .Values.persistence.size | default "1Gi" }}
+      storageClassName: {{ .Values.persistence.storageClassName | default "default" }}
