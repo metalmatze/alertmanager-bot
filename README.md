@@ -254,7 +254,7 @@ items:
         volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: data
+            claimName: alertmanager-bot
     volumeClaimTemplates:
     - apiVersion: v1
       kind: PersistentVolumeClaim
