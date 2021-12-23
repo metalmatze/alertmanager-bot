@@ -383,8 +383,10 @@ func (b *Bot) handleChats(message *telebot.Message) error {
 	for _, chat := range chats {
 		if chat.Type == telebot.ChatGroup {
 			list = list + fmt.Sprintf("@%s\n", chat.Title)
-		} else {
+		} else if len(chat.Username) > 0 {
 			list = list + fmt.Sprintf("@%s\n", chat.Username)
+		} else {
+			list = list + fmt.Sprintf("@%d\n", chat.ID)
 		}
 	}
 
