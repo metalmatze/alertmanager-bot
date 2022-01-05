@@ -36,10 +36,11 @@ const (
 	responseAlertsNotConfigured = "This chat hasn't been setup to receive any alerts yet... 😕\n\n" +
 		"Ask an administrator of the Alertmanager to add a webhook with `/webhooks/telegram/%d` as URL."
 
-	responseStartPrivate = "Hey, %s! I will now keep you up to date!\n" + CommandHelp
-	responseStartGroup   = "Hey! I will now keep you all up to date!\n" + CommandHelp
-	responseStop         = "Alright, %s! I won't talk to you again.\n" + CommandHelp
-	ResponseHelp         = `
+	responseStartPrivate          = "Hey, %s! I will now keep you up to date!\n" + CommandHelp
+	responseStartPrivateAnonymous = "Hey! I will now keep you up to date!\n" + CommandHelp
+	responseStartGroup            = "Hey! I will now keep you all up to date!\n" + CommandHelp
+	responseStop                  = "Alright, %s! I won't talk to you again.\n" + CommandHelp
+	ResponseHelp                  = `
 I'm a Prometheus AlertManager Bot for Telegram. I will notify you about alerts.
 You can also ask me about my ` + CommandStatus + `, ` + CommandAlerts + ` & ` + CommandSilences + `
 
@@ -337,8 +338,14 @@ func (b *Bot) handleStart(message *telebot.Message) error {
 	)
 
 	if message.Chat.Type == telebot.ChatPrivate {
-		_, err := b.telegram.Send(message.Chat, fmt.Sprintf(responseStartPrivate, message.Sender.FirstName))
-		return err
+		if len(message.Sender.FirstName) > 0 {
+			_, err := b.telegram.Send(message.Chat, fmt.Sprintf(responseStartPrivate, message.Sender.FirstName))
+			return err
+		} else {
+			_, err := b.telegram.Send(message.Chat, responseStartPrivateAnonymous)
+			return err
+		}
+
 	} else {
 		_, err := b.telegram.Send(message.Chat, responseStartGroup)
 		return err
@@ -383,8 +390,10 @@ func (b *Bot) handleChats(message *telebot.Message) error {
 	for _, chat := range chats {
 		if chat.Type == telebot.ChatGroup {
 			list = list + fmt.Sprintf("@%s\n", chat.Title)
-		} else {
+		} else if len(chat.Username) > 0 {
 			list = list + fmt.Sprintf("@%s\n", chat.Username)
+		} else {
+			list = list + fmt.Sprintf("@%d\n", chat.ID)
 		}
 	}
 

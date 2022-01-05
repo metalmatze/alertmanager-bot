@@ -47,6 +47,11 @@ var (
 		Username:  "nobody",
 		IsBot:     false,
 	}
+	// The admin is determined by ID, so we can use different user objects with the same ID in the tests without creating inconsistent state.
+	anonymousAdmin = &telebot.User{
+		ID:    123,
+		IsBot: false,
+	}
 
 	webhookFiring = webhook.Message{
 		Data: &template.Data{
