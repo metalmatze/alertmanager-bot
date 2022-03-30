@@ -17,8 +17,6 @@ RUN apk add --no-cache --update ca-certificates tini
 COPY ./default.tmpl /templates/default.tmpl
 COPY --from=build /usr/src/app/alertmanager-bot /usr/bin/alertmanager-bot
 
-USER nobody
-
 ENTRYPOINT ["/sbin/tini", "--"]
 
 CMD ["/usr/bin/alertmanager-bot"]
