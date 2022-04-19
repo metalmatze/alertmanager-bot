@@ -1,5 +1,11 @@
-# Bot for Prometheus' Alertmanager
+# ⚠️ This project is deprecated ⚠️ 
 
+Alertmanager v0.24+ has Telegram support out of the box. Going forward, please simply use Alertmanager instead of this bot.  
+This project **will be archived at the end of July 2020**.
+
+Until then you can ask questions in [this GitHub Discussion](https://github.com/metalmatze/alertmanager-bot/discussions/210).
+
+# Bot for Prometheus' Alertmanager
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/metalmatze/alertmanager-bot.svg?maxAge=604800)](https://hub.docker.com/r/metalmatze/alertmanager-bot)
 [![Go Report Card](https://goreportcard.com/badge/github.com/metalmatze/alertmanager-bot)](https://goreportcard.com/report/github.com/metalmatze/alertmanager-bot)
