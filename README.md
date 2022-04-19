@@ -1,7 +1,7 @@
 # ⚠️ This project is deprecated ⚠️ 
 
 Alertmanager v0.24+ has Telegram support out of the box. Going forward, please simply use Alertmanager instead of this bot.  
-This project **will be archived at the end of July 2020**.
+This project **will be archived at the end of July 2022**.
 
 Until then you can ask questions in [this GitHub Discussion](https://github.com/metalmatze/alertmanager-bot/discussions/210).
 
