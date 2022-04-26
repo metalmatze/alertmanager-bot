@@ -33,7 +33,7 @@ var webhookWorkflows = []workflow{{
 		message:   "Hey, Elliot! I will now keep you up to date!\n/help",
 	}, {
 		recipient: "123",
-		message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
+		message:   "🔥 <a href=\"http://localhost:9090/graph?g0.expr=fire\"><b>fire</b></a> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
 	}},
 	counter: map[string]uint{telegram.CommandStart: 1},
 	logs: []string{
@@ -61,7 +61,7 @@ var webhookWorkflows = []workflow{{
 		message:   "Hey! I will now keep you all up to date!\n/help",
 	}, {
 		recipient: "-1234",
-		message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
+		message:   "🔥 <a href=\"http://localhost:9090/graph?g0.expr=fire\"><b>fire</b></a> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
 	}},
 	counter: map[string]uint{telegram.CommandStart: 1},
 	logs: []string{
@@ -101,7 +101,7 @@ var webhookWorkflows = []workflow{{
 		message:   "Hey! I will now keep you all up to date!\n/help",
 	}, {
 		recipient: "-1234",
-		message:   "🔥 <b>fire</b> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
+		message:   "🔥 <a href=\"http://localhost:9090/graph?g0.expr=fire\"><b>fire</b></a> 🔥\n<b>Labels:</b>\n    severity: critical\n<b>Annotations:</b>\n    message: Something is on fire\n<b>Duration:</b> 1 hour",
 	}},
 	counter: map[string]uint{telegram.CommandStart: 2},
 	logs: []string{
